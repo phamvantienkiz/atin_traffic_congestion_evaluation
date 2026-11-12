@@ -1,0 +1,691 @@
+/* ==========================================================================
+   Design System — "Soft Clean Cards"
+   Source of Truth: scripts/RTSP/soft-clean-cards.md
+   ========================================================================== */
+
+:root {
+  /* 2.1 Neutral tokens (occupies ~95% of UI) */
+  --bg-page: #F5F5F7;
+  --bg-card: #FFFFFF;
+  --bg-subtle: #F4F4F6;
+  --bg-subtle-hover: #ECECEF;
+  --border-hairline: #EFEFF2;
+  --border-card: #E9E9EE;
+  --text-primary: #0B0B0F;
+  --text-secondary: #6B6B76;
+  --text-tertiary: #9A9AA5;
+  --ink: #111114;
+
+  /* 2.1 Data palette (strictly for status & data metrics) */
+  --data-1: #1F5FFF; /* Blue */
+  --data-2: #B13BF0; /* Purple */
+  --data-3: #FF8A1F; /* Orange */
+  --data-4: #1FA63A; /* Green */
+  --data-alert: #E5483D; /* Red */
+
+  /* Pastel tints */
+  --pastel-blue: #D9E8FF;
+  --pastel-mint: #D8F3E4;
+  --pastel-pink: #FFD9E8;
+  --pastel-purple: #E6DDFB;
+
+  /* 2.4 Radii */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 28px; /* Card border radius */
+  --radius-full: 999px;
+
+  /* 2.5 Shadows */
+  --shadow-card: 0 1px 2px rgba(16, 16, 24, 0.04), 0 8px 24px rgba(16, 16, 24, 0.06);
+  --shadow-control: 0 1px 2px rgba(16, 16, 24, 0.08), 0 0 0 1px rgba(16, 16, 24, 0.04);
+  --shadow-primary: 0 6px 16px rgba(16, 16, 24, 0.22);
+
+  /* 2.3 Spacing (4px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+}
+
+/* Base resets & typography */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  min-height: 100vh;
+}
+
+body {
+  background: linear-gradient(180deg, var(--bg-page) 70%, #EDEDF0 100%);
+  color: var(--text-primary);
+  font-family: "Inter", "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  padding: var(--space-6) var(--space-6) var(--space-8);
+  line-height: 1.4;
+}
+
+/* App Container */
+.app-container {
+  max-width: 1720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Top Dashboard Header Card */
+.header-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.brand-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--ink);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  box-shadow: var(--shadow-control);
+}
+
+.header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.app-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Header Middle - Hero Metric (Nhân vật chính lớn) */
+.header-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  background: var(--bg-subtle);
+  padding: 8px 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-hairline);
+}
+
+.hero-number {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.hero-unit {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+/* Header Right - Controls */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* 4.4 Segmented Control (Week / Month / Year style) */
+.segmented {
+  background: var(--bg-subtle);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  display: inline-flex;
+  gap: 3px;
+  border: 1px solid var(--border-hairline);
+}
+
+.segmented button {
+  padding: 7px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 400;
+  transition: all 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  white-space: nowrap;
+}
+
+.segmented button:hover {
+  color: var(--text-primary);
+}
+
+.segmented button[aria-selected="true"] {
+  background: #ffffff;
+  color: var(--text-primary);
+  font-weight: 500;
+  box-shadow: var(--shadow-control);
+}
+
+/* Ghost Action Buttons */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 120ms ease-out, transform 120ms ease-out;
+}
+
+.btn-ghost:hover {
+  background: var(--bg-subtle-hover);
+}
+
+.btn-ghost:active {
+  transform: scale(0.98);
+}
+
+/* 4.2 Circular Icon Buttons (32x32, touch target >= 44px) */
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: var(--radius-full);
+  background: #ffffff;
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-control);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: background-color 120ms ease-out, transform 120ms ease-out;
+  position: relative;
+}
+
+.btn-icon::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  right: -6px;
+  bottom: -6px;
+}
+
+.btn-icon:hover {
+  background: var(--bg-subtle);
+}
+
+.btn-icon:active {
+  transform: scale(0.96);
+}
+
+.btn-icon svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.6px;
+}
+
+/* 4.3 Nút chính tròn (Play) — 48x48, nền --ink, shadow-primary */
+.btn-play-ink {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: var(--radius-full);
+  background: var(--ink);
+  color: #ffffff;
+  border: none;
+  box-shadow: var(--shadow-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 120ms ease-out, opacity 120ms ease-out, background-color 150ms ease;
+}
+
+.btn-play-ink:hover {
+  opacity: 0.92;
+  transform: scale(1.03);
+}
+
+.btn-play-ink:active {
+  transform: scale(0.95);
+}
+
+.btn-play-ink.is-playing {
+  background: var(--data-alert);
+}
+
+.btn-play-ink svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+/* Video Grid Layouts */
+.video-grid {
+  display: grid;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.video-grid[data-layout="4"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.video-grid[data-layout="6"] {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.video-grid[data-layout="8"] {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1400px) {
+  .video-grid[data-layout="8"] {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 990px) {
+  .video-grid[data-layout="4"],
+  .video-grid[data-layout="6"],
+  .video-grid[data-layout="8"] {
+    grid-template-columns: 1fr;
+  }
+  .header-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .header-hero {
+    align-self: flex-start;
+  }
+}
+
+/* 4.1 Card ("Một thẻ = một nhiệm vụ") */
+.camera-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  transition: box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.camera-card:focus-within {
+  border-color: #d2d2dc;
+}
+
+/* Card Header */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+/* Status Dot & Pill */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  transition: all 200ms ease;
+  border: 1px solid var(--border-hairline);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  transition: background-color 200ms ease;
+}
+
+.status-pill[data-status="live"] {
+  background: var(--pastel-mint);
+  color: var(--data-4);
+  border-color: rgba(31, 166, 58, 0.2);
+}
+.status-pill[data-status="live"] .status-dot {
+  background: var(--data-4);
+  box-shadow: 0 0 6px rgba(31, 166, 58, 0.4);
+}
+
+.status-pill[data-status="connecting"] {
+  background: #FFF4E5;
+  color: var(--data-3);
+  border-color: rgba(255, 138, 31, 0.25);
+}
+.status-pill[data-status="connecting"] .status-dot {
+  background: var(--data-3);
+  animation: pulse-dot 1s infinite alternate;
+}
+
+.status-pill[data-status="error"] {
+  background: #FDE8E7;
+  color: var(--data-alert);
+  border-color: rgba(229, 72, 61, 0.2);
+}
+.status-pill[data-status="error"] .status-dot {
+  background: var(--data-alert);
+}
+
+@keyframes pulse-dot {
+  from { opacity: 0.35; }
+  to { opacity: 1.0; }
+}
+
+/* Card Actions */
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Video Viewport Container */
+.video-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #111114;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.video-stream {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+}
+
+.video-stream.is-active {
+  display: block;
+}
+
+/* Canvas fallback simulation player */
+.video-canvas {
+  width: 100%;
+  height: 100%;
+  display: none;
+}
+
+.video-canvas.is-active {
+  display: block;
+}
+
+/* Idle / Offline Viewport Placeholder */
+.viewport-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-tertiary);
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.placeholder-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: #666675;
+  stroke-width: 1.5px;
+}
+
+.placeholder-text {
+  font-size: 13px;
+  color: #8C8C9A;
+  font-weight: 400;
+}
+
+/* Live HUD overlay on video */
+.video-hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud-tag {
+  background: rgba(17, 17, 20, 0.75);
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+  padding: 4px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hud-tag.live-indicator {
+  color: #4ade80;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hud-tag.live-indicator::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 6px #4ade80;
+}
+
+/* Fullscreen expanded state */
+.camera-card.is-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  border-radius: 0;
+  margin: 0;
+  padding: 24px;
+  background: #FFFFFF;
+}
+
+.camera-card.is-fullscreen .video-viewport {
+  aspect-ratio: auto;
+  flex: 1;
+}
+
+/* RTSP URL Input Box & Play Button */
+.input-control-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.rtsp-input {
+  width: 100%;
+  height: 48px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--text-primary);
+  outline: none;
+  transition: all 120ms ease-out;
+}
+
+.rtsp-input:focus {
+  background: #ffffff;
+  border-color: var(--data-1);
+  box-shadow: 0 0 0 3px rgba(31, 95, 255, 0.12);
+}
+
+.rtsp-input::placeholder {
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+/* Preset Pills */
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-preset {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  padding: 4px 11px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 120ms ease;
+}
+
+.btn-preset:hover {
+  background: var(--bg-subtle-hover);
+  color: var(--text-primary);
+}
+
+/* 4.6 Metric Row (Ba cột đều nhau: Label trên, Value dưới) */
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  padding-top: 16px;
+  border-top: 1px solid var(--border-hairline);
+}
+
+.metric-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.metric-value-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.metric-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.metric-unit {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Accessibility & Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RTSP Multi-Stream Video Wall — Soft Clean Cards</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================================================
+       Embedded Design System — "Soft Clean Cards"
+       Ensures 100% immediate rendering even if opened as standalone file
+       ========================================================================== */
+    :root {
+      --bg-page: #F5F5F7;
+      --bg-card: #FFFFFF;
+      --bg-subtle: #F4F4F6;
+      --bg-subtle-hover: #ECECEF;
+      --border-hairline: #EFEFF2;
+      --border-card: #E9E9EE;
+      --text-primary: #0B0B0F;
+      --text-secondary: #6B6B76;
+      --text-tertiary: #9A9AA5;
+      --ink: #111114;
+
+      --data-1: #1F5FFF;
+      --data-2: #B13BF0;
+      --data-3: #FF8A1F;
+      --data-4: #1FA63A;
+      --data-alert: #E5483D;
+
+      --pastel-blue: #D9E8FF;
+      --pastel-mint: #D8F3E4;
+      --pastel-pink: #FFD9E8;
+
+      --radius-xs: 4px;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 28px;
+      --radius-full: 999px;
+
+      --shadow-card: 0 1px 2px rgba(16, 16, 24, 0.04), 0 8px 24px rgba(16, 16, 24, 0.06);
+      --shadow-control: 0 1px 2px rgba(16, 16, 24, 0.08), 0 0 0 1px rgba(16, 16, 24, 0.04);
+      --shadow-primary: 0 6px 16px rgba(16, 16, 24, 0.22);
+
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: linear-gradient(180deg, var(--bg-page) 70%, #EDEDF0 100%);
+      color: var(--text-primary);
+      font-family: "Inter", "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-variant-numeric: tabular-nums;
+      -webkit-font-smoothing: antialiased;
+      padding: var(--space-6) var(--space-6) var(--space-8);
+      line-height: 1.4;
+      min-height: 100vh;
+    }
+
+    .app-container {
+      max-width: 1720px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    /* Header Card */
+    .header-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-xl);
+      padding: 24px 28px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-5);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .brand-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: var(--ink);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: -0.02em;
+      box-shadow: var(--shadow-control);
+    }
+
+    .header-titles {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .app-title {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .app-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .header-hero {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      background: var(--bg-subtle);
+      padding: 8px 18px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-hairline);
+    }
+
+    .hero-number {
+      font-size: 32px;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+    }
+
+    .hero-unit {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-secondary);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+
+    /* Segmented Control */
+    .segmented {
+      background: var(--bg-subtle);
+      border-radius: var(--radius-lg);
+      padding: 4px;
+      display: inline-flex;
+      gap: 3px;
+      border: 1px solid var(--border-hairline);
+    }
+
+    .segmented button {
+      padding: 7px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 400;
+      transition: all 200ms cubic-bezier(0.32, 0.72, 0, 1);
+      white-space: nowrap;
+    }
+
+    .segmented button:hover {
+      color: var(--text-primary);
+    }
+
+    .segmented button[aria-selected="true"] {
+      background: #ffffff;
+      color: var(--text-primary);
+      font-weight: 500;
+      box-shadow: var(--shadow-control);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 38px;
+      padding: 0 16px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+      transition: background-color 120ms ease-out, transform 120ms ease-out;
+    }
+
+    .btn-ghost:hover {
+      background: var(--bg-subtle-hover);
+    }
+
+    .btn-ghost:active {
+      transform: scale(0.98);
+    }
+
+    .btn-icon {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      border-radius: var(--radius-full);
+      background: #ffffff;
+      border: 1px solid var(--border-card);
+      box-shadow: var(--shadow-control);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-primary);
+      transition: background-color 120ms ease-out, transform 120ms ease-out;
+      position: relative;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-subtle);
+    }
+
+    .btn-icon:active {
+      transform: scale(0.96);
+    }
+
+    .btn-icon svg {
+      width: 15px;
+      height: 15px;
+      stroke-width: 1.6px;
+    }
+
+    .btn-play-ink {
+      width: 48px;
+      height: 48px;
+      min-width: 48px;
+      border-radius: var(--radius-full);
+      background: var(--ink);
+      color: #ffffff;
+      border: none;
+      box-shadow: var(--shadow-primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 120ms ease-out, opacity 120ms ease-out, background-color 150ms ease;
+    }
+
+    .btn-play-ink:hover {
+      opacity: 0.92;
+      transform: scale(1.03);
+    }
+
+    .btn-play-ink:active {
+      transform: scale(0.95);
+    }
+
+    .btn-play-ink.is-playing {
+      background: var(--data-alert);
+    }
+
+    .btn-play-ink svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    /* Video Grid */
+    .video-grid {
+      display: grid;
+      gap: var(--space-6);
+      width: 100%;
+    }
+
+    .video-grid[data-layout="4"] {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .video-grid[data-layout="6"] {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .video-grid[data-layout="8"] {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    @media (max-width: 1400px) {
+      .video-grid[data-layout="8"] {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 990px) {
+      .video-grid[data-layout="4"],
+      .video-grid[data-layout="6"],
+      .video-grid[data-layout="8"] {
+        grid-template-columns: 1fr;
+      }
+      .header-card {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .header-hero {
+        align-self: flex-start;
+      }
+    }
+
+    /* Card */
+    .camera-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      position: relative;
+      transition: box-shadow 150ms ease, border-color 150ms ease;
+    }
+
+    .camera-card:focus-within {
+      border-color: #d2d2dc;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 11px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--bg-subtle);
+      color: var(--text-secondary);
+      transition: all 200ms ease;
+      border: 1px solid var(--border-hairline);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      transition: background-color 200ms ease;
+    }
+
+    .status-pill[data-status="live"] {
+      background: var(--pastel-mint);
+      color: var(--data-4);
+      border-color: rgba(31, 166, 58, 0.2);
+    }
+    .status-pill[data-status="live"] .status-dot {
+      background: var(--data-4);
+      box-shadow: 0 0 6px rgba(31, 166, 58, 0.4);
+    }
+
+    .status-pill[data-status="connecting"] {
+      background: #FFF4E5;
+      color: var(--data-3);
+      border-color: rgba(255, 138, 31, 0.25);
+    }
+    .status-pill[data-status="connecting"] .status-dot {
+      background: var(--data-3);
+      animation: pulse-dot 1s infinite alternate;
+    }
+
+    .status-pill[data-status="error"] {
+      background: #FDE8E7;
+      color: var(--data-alert);
+      border-color: rgba(229, 72, 61, 0.2);
+    }
+    .status-pill[data-status="error"] .status-dot {
+      background: var(--data-alert);
+    }
+
+    @keyframes pulse-dot {
+      from { opacity: 0.35; }
+      to { opacity: 1.0; }
+    }
+
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    /* Video Viewport */
+    .video-viewport {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #111114;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    }
+
+    .video-stream, .video-canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .video-stream.is-active, .video-canvas.is-active {
+      display: block;
+    }
+
+    .viewport-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text-tertiary);
+      padding: var(--space-4);
+      text-align: center;
+    }
+
+    .placeholder-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-full);
+      background: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .placeholder-icon svg {
+      width: 24px;
+      height: 24px;
+      stroke: #666675;
+      stroke-width: 1.5px;
+    }
+
+    .placeholder-text {
+      font-size: 13px;
+      color: #8C8C9A;
+      font-weight: 400;
+    }
+
+    .video-hud {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .hud-tag {
+      background: rgba(17, 17, 20, 0.75);
+      backdrop-filter: blur(10px);
+      color: #ffffff;
+      padding: 4px 9px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .hud-tag.live-indicator {
+      color: #4ade80;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hud-tag.live-indicator::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 6px #4ade80;
+    }
+
+    .camera-card.is-fullscreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 9999;
+      border-radius: 0;
+      margin: 0;
+      padding: 24px;
+      background: #FFFFFF;
+    }
+
+    .camera-card.is-fullscreen .video-viewport {
+      aspect-ratio: auto;
+      flex: 1;
+    }
+
+    /* Input & Controls */
+    .input-control-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .input-wrapper {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .rtsp-input {
+      width: 100%;
+      height: 48px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-md);
+      padding: 0 16px;
+      font-family: inherit;
+      font-size: 13.5px;
+      color: var(--text-primary);
+      outline: none;
+      transition: all 120ms ease-out;
+    }
+
+    .rtsp-input:focus {
+      background: #ffffff;
+      border-color: var(--data-1);
+      box-shadow: 0 0 0 3px rgba(31, 95, 255, 0.12);
+    }
+
+    .rtsp-input::placeholder {
+      color: var(--text-tertiary);
+      font-size: 13px;
+    }
+
+    .preset-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-preset {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-sm);
+      padding: 4px 11px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 120ms ease;
+    }
+
+    .btn-preset:hover {
+      background: var(--bg-subtle-hover);
+      color: var(--text-primary);
+    }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-4);
+      padding-top: 16px;
+      border-top: 1px solid var(--border-hairline);
+    }
+
+    .metric-col {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .metric-value-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .metric-value {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .metric-unit {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Top Dashboard Header Card -->
+    <header class="header-card">
+      <div class="header-left">
+        <div class="brand-badge">AT</div>
+        <div class="header-titles">
+          <h1 class="app-title">RTSP Stream Wall</h1>
+          <p class="app-subtitle">Bufferless Multi-Camera Stream Ingestion &amp; Live Monitoring</p>
+        </div>
+      </div>
+
+      <!-- Hero Metric (Con số lớn nhân vật chính) -->
+      <div class="header-hero">
+        <span class="hero-number" id="heroActiveStreams">0</span>
+        <span class="hero-unit">/ <span id="heroTotalSlots">4</span> active feeds</span>
+      </div>
+
+      <!-- Header Action Controls -->
+      <div class="header-controls">
+        <!-- 4.4 Segmented Control for Layout Selection -->
+        <div class="segmented" role="tablist" aria-label="Layout view selector">
+          <button type="button" role="tab" id="tab-layout-4" aria-selected="true" data-layout="4">4 Cameras</button>
+          <button type="button" role="tab" id="tab-layout-6" aria-selected="false" data-layout="6">6 Cameras</button>
+          <button type="button" role="tab" id="tab-layout-8" aria-selected="false" data-layout="8">8 Cameras</button>
+        </div>
+
+        <!-- Global Action Buttons -->
+        <button type="button" class="btn-ghost" id="btnDemoAll" title="Phát mẫu giả lập trên tất cả camera để kiểm thử">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Demo all
+        </button>
+
+        <button type="button" class="btn-ghost" id="btnStopAll" title="Dừng toàn bộ các luồng">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="6" width="12" height="12"></rect>
+          </svg>
+          Stop all
+        </button>
+      </div>
+    </header>
+
+    <!-- 4 - 8 Video Grid Cards -->
+    <main class="video-grid" id="videoGrid" data-layout="4">
+      
+      <!-- Slot 1 -->
+      <article class="camera-card" id="slot-card-1" data-slot="1">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">Camera 01</h2>
+            <span class="status-pill" data-status="idle">
+              <span class="status-dot"></span>
+              <span class="status-text">Idle</span>
+            </span>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="btn-icon btn-fullscreen" title="Toàn màn hình" aria-label="Fullscreen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line>
+              </svg>
+            </button>
+            <button type="button" class="btn-icon btn-clear" title="Xóa cấu hình" aria-label="Clear slot">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="video-viewport">
+          <img class="video-stream" alt="Video stream Camera 01">
+          <canvas class="video-canvas" width="640" height="360"></canvas>
+          <div class="viewport-placeholder">
+            <div class="placeholder-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 7l-7 5 7 5V7z"></path>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+              </svg>
+            </div>
+            <span class="placeholder-text">Chưa phát luồng RTSP</span>
+          </div>
+          <div class="video-hud" style="display: none;">
+            <span class="hud-tag live-indicator">LIVE</span>
+            <span class="hud-tag res-indicator">--</span>
+          </div>
+        </div>
+
+        <div class="input-control-row">
+          <div class="input-wrapper">
+            <input type="text" class="rtsp-input" placeholder="rtsp://admin:pass@ip:port/stream hoặc 'demo'" spellcheck="false" autocomplete="off">
+          </div>
+          <button type="button" class="btn-play-ink" title="Bắt đầu phát luồng" aria-label="Play/Stop">
+            <svg viewBox="0 0 24 24">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+          </button>
+        </div>
+
+        <div class="preset-row">
+          <button type="button" class="btn-preset btn-preset-demo">Test demo</button>
+          <button type="button" class="btn-preset btn-preset-copy">Copy URL</button>
+        </div>
+
+        <div class="metric-row">
+          <div class="metric-col">
+            <span class="metric-label">Frame rate</span>
+            <div class="metric-value-wrap">
+              <span class="metric-value val-fps">0.0</span>
+              <span class="metric-unit">fps</span>
+            </div>
+          </div>
+          <div class="metric-col">
+            <span class="metric-label">Resolution</span>
+            <div class="metric-value-wrap">
+              <span class="metric-value val-res">--</span>
+            </div>
+          </div>
+          <div class="metric-col">
+            <span class="metric-label">Connection</span>
+            <div class="metric-value-wrap">
+              <span class="metric-value val-state">Disconnected</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Slot 2 -->
+      <article class="camera-card" id="slot-card-2" data-slot="2">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">Camera 02</h2>
+            <span class="status-pill" data-status="idle"><span class="status-dot"></span><span class="status-text">Idle</span></span>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="btn-icon btn-fullscreen" title="Toàn màn hình" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+            <button type="button" class="btn-icon btn-clear" title="Xóa" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+        </div>
+        <div class="video-viewport">
+          <img class="video-stream" alt="Video stream Camera 02">
+          <canvas class="video-canvas" width="640" height="360"></canvas>
+          <div class="viewport-placeholder"><div class="placeholder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg></div><span class="placeholder-text">Chưa phát luồng RTSP</span></div>
+          <div class="video-hud" style="display: none;"><span class="hud-tag live-indicator">LIVE</span><span class="hud-tag res-indicator">--</span></div>
+        </div>
+        <div class="input-control-row">
+          <div class="input-wrapper"><input type="text" class="rtsp-input" placeholder="rtsp://admin:pass@ip:port/stream hoặc 'demo'" spellcheck="false" autocomplete="off"></div>
+          <button type="button" class="btn-play-ink" title="Bắt đầu phát" aria-label="Play/Stop"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
+        </div>
+        <div class="preset-row">
+          <button type="button" class="btn-preset btn-preset-demo">Test demo</button>
+          <button type="button" class="btn-preset btn-preset-copy">Copy URL</button>
+        </div>
+        <div class="metric-row">
+          <div class="metric-col"><span class="metric-label">Frame rate</span><div class="metric-value-wrap"><span class="metric-value val-fps">0.0</span><span class="metric-unit">fps</span></div></div>
+          <div class="metric-col"><span class="metric-label">Resolution</span><div class="metric-value-wrap"><span class="metric-value val-res">--</span></div></div>
+          <div class="metric-col"><span class="metric-label">Connection</span><div class="metric-value-wrap"><span class="metric-value val-state">Disconnected</span></div></div>
+        </div>
+      </article>
+
+      <!-- Slot 3 -->
+      <article class="camera-card" id="slot-card-3" data-slot="3">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">Camera 03</h2>
+            <span class="status-pill" data-status="idle"><span class="status-dot"></span><span class="status-text">Idle</span></span>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="btn-icon btn-fullscreen" title="Toàn màn hình" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+            <button type="button" class="btn-icon btn-clear" title="Xóa" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+        </div>
+        <div class="video-viewport">
+          <img class="video-stream" alt="Video stream Camera 03">
+          <canvas class="video-canvas" width="640" height="360"></canvas>
+          <div class="viewport-placeholder"><div class="placeholder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg></div><span class="placeholder-text">Chưa phát luồng RTSP</span></div>
+          <div class="video-hud" style="display: none;"><span class="hud-tag live-indicator">LIVE</span><span class="hud-tag res-indicator">--</span></div>
+        </div>
+        <div class="input-control-row">
+          <div class="input-wrapper"><input type="text" class="rtsp-input" placeholder="rtsp://admin:pass@ip:port/stream hoặc 'demo'" spellcheck="false" autocomplete="off"></div>
+          <button type="button" class="btn-play-ink" title="Bắt đầu phát" aria-label="Play/Stop"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
+        </div>
+        <div class="preset-row">
+          <button type="button" class="btn-preset btn-preset-demo">Test demo</button>
+          <button type="button" class="btn-preset btn-preset-copy">Copy URL</button>
+        </div>
+        <div class="metric-row">
+          <div class="metric-col"><span class="metric-label">Frame rate</span><div class="metric-value-wrap"><span class="metric-value val-fps">0.0</span><span class="metric-unit">fps</span></div></div>
+          <div class="metric-col"><span class="metric-label">Resolution</span><div class="metric-value-wrap"><span class="metric-value val-res">--</span></div></div>
+          <div class="metric-col"><span class="metric-label">Connection</span><div class="metric-value-wrap"><span class="metric-value val-state">Disconnected</span></div></div>
+        </div>
+      </article>
+
+      <!-- Slot 4 -->
+      <article class="camera-card" id="slot-card-4" data-slot="4">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">Camera 04</h2>
+            <span class="status-pill" data-status="idle"><span class="status-dot"></span><span class="status-text">Idle</span></span>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="btn-icon btn-fullscreen" title="Toàn màn hình" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+            <button type="button" class="btn-icon btn-clear" title="Xóa" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+        </div>
+        <div class="video-viewport">
+          <img class="video-stream" alt="Video stream Camera 04">
+          <canvas class="video-canvas" width="640" height="360"></canvas>
+          <div class="viewport-placeholder"><div class="placeholder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg></div><span class="placeholder-text">Chưa phát luồng RTSP</span></div>
+          <div class="video-hud" style="display: none;"><span class="hud-tag live-indicator">LIVE</span><span class="hud-tag res-indicator">--</span></div>
+        </div>
+        <div class="input-control-row">
+          <div class="input-wrapper"><input type="text" class="rtsp-input" placeholder="rtsp://admin:pass@ip:port/stream hoặc 'demo'" spellcheck="false" autocomplete="off"></div>
+          <button type="button" class="btn-play-ink" title="Bắt đầu phát" aria-label="Play/Stop"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
+        </div>
+        <div class="preset-row">
+          <button type="button" class="btn-preset btn-preset-demo">Test demo</button>
+          <button type="button" class="btn-preset btn-preset-copy">Copy URL</button>
+        </div>
+        <div class="metric-row">
+          <div class="metric-col"><span class="metric-label">Frame rate</span><div class="metric-value-wrap"><span class="metric-value val-fps">0.0</span><span class="metric-unit">fps</span></div></div>
+          <div class="metric-col"><span class="metric-label">Resolution</span><div class="metric-value-wrap"><span class="metric-value val-res">--</span></div></div>
+          <div class="metric-col"><span class="metric-label">Connection</span><div class="metric-value-wrap"><span class="metric-value val-state">Disconnected</span></div></div>
+        </div>
+      </article>
+
+      <!-- Slot 5 -->
+      <article class="camera-card slot-extra" id="slot-card-5" data-slot="5" style="display: none;">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">Camera 05</h2>
+            <span class="status-pill" data-status="idle"><span class="status-dot"></span><span class="status-text">Idle</span></span>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="btn-icon btn-fullscreen" title="Toàn màn hình" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+            <button type="button" class="btn-icon btn-clear" title="Xóa" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+        </div>
+        <div class="video-viewport">
+          <img class="video-stream" alt="Video stream Camera 05">
+          <canvas class="video-canvas" width="640" height="360"></canvas>
+          <div class="viewport-placeholder"><div class="placeholder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg></div><span class="placeholder-text">Chưa phát luồng RTSP</span></div>
+          <div class="video-hud" style="display: none;"><span class="hud-tag live-indicator">LIVE</span><span class="hud-tag res-indicator">--</span></div>
+        </div>
+        <div class="input-control-row">
+          <div class="input-wrapper"><input type="text" class="rtsp-input" placeholder="rtsp://admin:pass@ip:port/stream hoặc 'demo'" spellcheck="false" autocomplete="off"></div>
+          <button type="button" class="btn-play-ink" title="Bắt đầu phát" aria-label="Play/Stop"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
+        </div>
+        <div class="preset-row">
+          <button type="button" class="btn-preset btn-preset-demo">Test demo</button>
+          <button type="button" class="btn-preset btn-preset-copy">Copy URL</button>
+        </div>
+        <div class="metric-row">
+          <div class="metric-col"><span class="metric-label">Frame rate</span><div class="metric-value-wrap"><span class="metric-value val-fps">0.0</span><span class="metric-unit">fps</span></div></div>
+          <div class="metric-col"><span class="metric-label">Resolution</span><div class="metric-value-wrap"><span class="metric-value val-res">--</span></div></div>
+          <div class="metric-col"><span class="metric-label">Connection</span><div class="metric-value-wrap"><span class="metric-value val-state">Disconnected</span></div></div>
+        </div>
+      </article>
+
+      <!-- Slot 6 -->
+      <article class="camera-card slot-extra" id="slot-card-6" data-slot="6" style="display: none;">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">Camera 06</h2>
+            <span class="status-pill" data-status="idle"><span class="status-dot"></span><span class="status-text">Idle</span></span>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="btn-icon btn-fullscreen" title="Toàn màn hình" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+            <button type="button" class="btn-icon btn-clear" title="Xóa" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+        </div>
+        <div class="video-viewport">
+          <img class="video-stream" alt="Video stream Camera 06">
+          <canvas class="video-canvas" width="640" height="360"></canvas>
+          <div class="viewport-placeholder"><div class="placeholder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg></div><span class="placeholder-text">Chưa phát luồng RTSP</span></div>
+          <div class="video-hud" style="display: none;"><span class="hud-tag live-indicator">LIVE</span><span class="hud-tag res-indicator">--</span></div>
+        </div>
+        <div class="input-control-row">
+          <div class="input-wrapper"><input type="text" class="rtsp-input" placeholder="rtsp://admin:pass@ip:port/stream hoặc 'demo'" spellcheck="false" autocomplete="off"></div>
+          <button type="button" class="btn-play-ink" title="Bắt đầu phát" aria-label="Play/Stop"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
+        </div>
+        <div class="preset-row">
+          <button type="button" class="btn-preset btn-preset-demo">Test demo</button>
+          <button type="button" class="btn-preset btn-preset-copy">Copy URL</button>
+        </div>
+        <div class="metric-row">
+          <div class="metric-col"><span class="metric-label">Frame rate</span><div class="metric-value-wrap"><span class="metric-value val-fps">0.0</span><span class="metric-unit">fps</span></div></div>
+          <div class="metric-col"><span class="metric-label">Resolution</span><div class="metric-value-wrap"><span class="metric-value val-res">--</span></div></div>
+          <div class="metric-col"><span class="metric-label">Connection</span><div class="metric-value-wrap"><span class="metric-value val-state">Disconnected</span></div></div>
+        </div>
+      </article>
+
+      <!-- Slot 7 -->
+      <article class="camera-card slot-extra" id="slot-card-7" data-slot="7" style="display: none;">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">Camera 07</h2>
+            <span class="status-pill" data-status="idle"><span class="status-dot"></span><span class="status-text">Idle</span></span>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="btn-icon btn-fullscreen" title="Toàn màn hình" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+            <button type="button" class="btn-icon btn-clear" title="Xóa" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+        </div>
+        <div class="video-viewport">
+          <img class="video-stream" alt="Video stream Camera 07">
+          <canvas class="video-canvas" width="640" height="360"></canvas>
+          <div class="viewport-placeholder"><div class="placeholder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg></div><span class="placeholder-text">Chưa phát luồng RTSP</span></div>
+          <div class="video-hud" style="display: none;"><span class="hud-tag live-indicator">LIVE</span><span class="hud-tag res-indicator">--</span></div>
+        </div>
+        <div class="input-control-row">
+          <div class="input-wrapper"><input type="text" class="rtsp-input" placeholder="rtsp://admin:pass@ip:port/stream hoặc 'demo'" spellcheck="false" autocomplete="off"></div>
+          <button type="button" class="btn-play-ink" title="Bắt đầu phát" aria-label="Play/Stop"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
+        </div>
+        <div class="preset-row">
+          <button type="button" class="btn-preset btn-preset-demo">Test demo</button>
+          <button type="button" class="btn-preset btn-preset-copy">Copy URL</button>
+        </div>
+        <div class="metric-row">
+          <div class="metric-col"><span class="metric-label">Frame rate</span><div class="metric-value-wrap"><span class="metric-value val-fps">0.0</span><span class="metric-unit">fps</span></div></div>
+          <div class="metric-col"><span class="metric-label">Resolution</span><div class="metric-value-wrap"><span class="metric-value val-res">--</span></div></div>
+          <div class="metric-col"><span class="metric-label">Connection</span><div class="metric-value-wrap"><span class="metric-value val-state">Disconnected</span></div></div>
+        </div>
+      </article>
+
+      <!-- Slot 8 -->
+      <article class="camera-card slot-extra" id="slot-card-8" data-slot="8" style="display: none;">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">Camera 08</h2>
+            <span class="status-pill" data-status="idle"><span class="status-dot"></span><span class="status-text">Idle</span></span>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="btn-icon btn-fullscreen" title="Toàn màn hình" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+            <button type="button" class="btn-icon btn-clear" title="Xóa" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+        </div>
+        <div class="video-viewport">
+          <img class="video-stream" alt="Video stream Camera 08">
+          <canvas class="video-canvas" width="640" height="360"></canvas>
+          <div class="viewport-placeholder"><div class="placeholder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg></div><span class="placeholder-text">Chưa phát luồng RTSP</span></div>
+          <div class="video-hud" style="display: none;"><span class="hud-tag live-indicator">LIVE</span><span class="hud-tag res-indicator">--</span></div>
+        </div>
+        <div class="input-control-row">
+          <div class="input-wrapper"><input type="text" class="rtsp-input" placeholder="rtsp://admin:pass@ip:port/stream hoặc 'demo'" spellcheck="false" autocomplete="off"></div>
+          <button type="button" class="btn-play-ink" title="Bắt đầu phát" aria-label="Play/Stop"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
+        </div>
+        <div class="preset-row">
+          <button type="button" class="btn-preset btn-preset-demo">Test demo</button>
+          <button type="button" class="btn-preset btn-preset-copy">Copy URL</button>
+        </div>
+        <div class="metric-row">
+          <div class="metric-col"><span class="metric-label">Frame rate</span><div class="metric-value-wrap"><span class="metric-value val-fps">0.0</span><span class="metric-unit">fps</span></div></div>
+          <div class="metric-col"><span class="metric-label">Resolution</span><div class="metric-value-wrap"><span class="metric-value val-res">--</span></div></div>
+          <div class="metric-col"><span class="metric-label">Connection</span><div class="metric-value-wrap"><span class="metric-value val-state">Disconnected</span></div></div>
+        </div>
+      </article>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
