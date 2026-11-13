@@ -53,8 +53,9 @@ document.addEventListener('keydown', (e) => {
   } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
     e.preventDefault();
     goToSlide(currentIdx - 1);
-  } else if (e.key >= '1' && e.key <= '7') {
-    goToSlide(Number(e.key) - 1);
+  } else if (e.key >= '1' && e.key <= '9') {
+    const idx = Number(e.key) - 1;
+    if (idx < slides.length) goToSlide(idx);
   }
 });
 
