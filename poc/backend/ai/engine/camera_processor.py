@@ -28,7 +28,7 @@ class CameraProcessor:
         overrides = cam.get("overrides") or {}
         self.cfg = replace(cfg, **overrides) if overrides else cfg
 
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.reader = StreamReader(
             camera_id=self.cam_id,
             url=rtsp_url,
@@ -62,20 +62,23 @@ class CameraProcessor:
     def update_meta(self, cam: dict) -> None:
         with self._lock:
             self.sm.has_traffic_light = bool(cam.get("has_traffic_light", False))
-            self.set_zone(cam.get("zone") or [])
+            self._set_zone_unlocked(cam.get("zone") or [])
 
     def set_zone(self, zone: list[dict]) -> None:
         with self._lock:
-            self.zone_px = zone_to_px(zone, self.cfg.frame_w, self.cfg.frame_h)
-            self.roi = roi_from_zone(
-                self.zone_px,
-                self.cfg.frame_w,
-                self.cfg.frame_h,
-                self.cfg.roi_padding,
-            )
-            self.zone_time.set_zone(self.zone_px)
-            self.flow_occ.set_zone(self.zone_px)
-            self.occlusion.set_zone(self.zone_px)
+            self._set_zone_unlocked(zone)
+
+    def _set_zone_unlocked(self, zone: list[dict]) -> None:
+        self.zone_px = zone_to_px(zone, self.cfg.frame_w, self.cfg.frame_h)
+        self.roi = roi_from_zone(
+            self.zone_px,
+            self.cfg.frame_w,
+            self.cfg.frame_h,
+            self.cfg.roi_padding,
+        )
+        self.zone_time.set_zone(self.zone_px)
+        self.flow_occ.set_zone(self.zone_px)
+        self.occlusion.set_zone(self.zone_px)
 
     def latest_frame(self) -> np.ndarray | None:
         pkt = self.reader.latest()
