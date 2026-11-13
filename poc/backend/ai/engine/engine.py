@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import threading
 
 import numpy as np
@@ -59,7 +60,8 @@ class TrafficEngine:
     def upsert_camera(self, cam: dict) -> None:
         """Add or update a camera; reads rtsp://127.0.0.1:8554/{cam_id} via MediaMTX."""
         cam_id = cam["id"]
-        rtsp_url = f"rtsp://127.0.0.1:8554/{cam_id}"
+        rtsp_port = int(os.getenv("MEDIAMTX_RTSP_PORT", "28554"))
+        rtsp_url = f"rtsp://127.0.0.1:{rtsp_port}/{cam_id}"
         if not cam.get("enabled", True):
             self.remove_camera(cam_id)
             return

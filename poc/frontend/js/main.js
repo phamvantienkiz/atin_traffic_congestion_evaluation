@@ -34,7 +34,7 @@ const eventsPanel = new EventsPanel(
   document.getElementById('snap-modal-title'),
 );
 
-let appCfg = { webrtc_port: 8889, demo_mode: false };
+let appCfg = { webrtc_port: 28889, demo_mode: false };
 let cards = {};
 let layoutCount = Number(localStorage.getItem('grid_layout') || 4);
 let toastTimer = null;

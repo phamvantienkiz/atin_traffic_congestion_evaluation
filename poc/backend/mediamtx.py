@@ -10,23 +10,29 @@ from pathlib import Path
 import yaml
 
 from schemas import Camera
+from settings import (
+    MEDIAMTX_API_PORT,
+    MEDIAMTX_ICE_TCP_PORT,
+    MEDIAMTX_RTSP_PORT,
+    MEDIAMTX_WEBRTC_PORT,
+)
 
 logger = logging.getLogger("mediamtx")
 
 BASE_CONFIG: dict = {
     "logLevel": "info",
     "api": True,
-    "apiAddress": "127.0.0.1:9997",
+    "apiAddress": f"127.0.0.1:{MEDIAMTX_API_PORT}",
     "rtsp": True,
-    "rtspAddress": ":8554",
+    "rtspAddress": f":{MEDIAMTX_RTSP_PORT}",
     "protocols": ["tcp"],
     "rtmp": False,
     "hls": False,
     "srt": False,
     "webrtc": True,
-    "webrtcAddress": ":8889",
+    "webrtcAddress": f":{MEDIAMTX_WEBRTC_PORT}",
     "webrtcLocalUDPAddress": "",
-    "webrtcLocalTCPAddress": ":8189",
+    "webrtcLocalTCPAddress": f":{MEDIAMTX_ICE_TCP_PORT}",
     "webrtcIPsFromInterfaces": False,
     "webrtcAdditionalHosts": ["127.0.0.1"],
     "webrtcAllowOrigin": "*",
