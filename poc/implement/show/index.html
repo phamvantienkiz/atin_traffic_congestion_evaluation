@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PoC Phase 1 — Hệ thống Đánh giá Mức độ Ùn tắc Giao thông</title>
+  <style>
+    :root {
+      /* Soft Clean Cards — Neutral (~95%) */
+      --bg-page: #F5F5F7;
+      --bg-page-end: #EDEDF0;
+      --bg-card: #FFFFFF;
+      --bg-subtle: #F4F4F6;
+      --bg-subtle-hover: #ECECEF;
+      --border-hairline: #EFEFF2;
+      --border-card: #E9E9EE;
+      --text-primary: #0B0B0F;
+      --text-secondary: #6B6B76;
+      --text-tertiary: #9A9AA5;
+      --ink: #111114;
+
+      /* Data Palette — Strictly for data & states */
+      --data-blue: #1F5FFF;
+      --data-purple: #B13BF0;
+      --data-orange: #FF8A1F;
+      --data-green: #1FA63A;
+      --data-red: #E5483D;
+
+      /* Pastel tints */
+      --tint-blue: #EEF3FF;
+      --tint-purple: #F6EEFD;
+      --tint-orange: #FFF3E6;
+      --tint-green: #EAF7EE;
+      --tint-red: #FDECEC;
+
+      /* Radii & Shadows */
+      --radius-xs: 4px;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 28px;
+      --radius-full: 999px;
+
+      --shadow-card: 0 1px 2px rgba(16, 16, 24, 0.04), 0 8px 24px rgba(16, 16, 24, 0.06);
+      --shadow-control: 0 1px 2px rgba(16, 16, 24, 0.08), 0 0 0 1px rgba(16, 16, 24, 0.04);
+      --shadow-primary: 0 6px 16px rgba(16, 16, 24, 0.22);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-snap-type: y proximity;
+    }
+
+    body {
+      font-family: "Inter", "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      font-feature-settings: "tnum" 1, "cv11" 1;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
+      background: linear-gradient(180deg, var(--bg-page) 0%, var(--bg-page-end) 100%);
+      min-height: 100vh;
+      line-height: 1.45;
+      overflow-x: hidden;
+    }
+
+    /* Sticky Top Presentation Bar */
+    .deck-bar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      background: rgba(245, 245, 247, 0.86);
+      border-bottom: 1px solid var(--border-card);
+    }
+
+    .deck-bar-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .brand-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: var(--radius-full);
+      background: var(--ink);
+    }
+
+    .slide-pills {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-card);
+      padding: 4px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-card);
+      box-shadow: var(--shadow-control);
+      overflow-x: auto;
+      max-width: 100%;
+    }
+
+    .slide-pill {
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .slide-pill:hover {
+      background: var(--bg-subtle);
+      color: var(--text-primary);
+    }
+
+    .slide-pill.active {
+      background: var(--ink);
+      color: #FFFFFF;
+    }
+
+    .deck-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .btn-ctrl {
+      border: 1px solid var(--border-card);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      box-shadow: var(--shadow-control);
+      transition: background 0.15s ease;
+    }
+
+    .btn-ctrl:hover { background: var(--bg-subtle); }
+    .btn-ctrl:focus-visible,
+    .slide-pill:focus-visible,
+    .preset-btn:focus-visible {
+      outline: 2px solid var(--data-blue);
+      outline-offset: 2px;
+    }
+
+    /* Slide Stage Container (16:9 Widescreen Deck) */
+    .deck {
+      max-width: 1328px;
+      margin: 0 auto;
+      padding: 24px 24px 72px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .slide {
+      scroll-snap-align: start;
+      scroll-margin-top: 68px;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-card);
+      padding: 36px 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 18px;
+    }
+
+    .slide-kicker {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .slide-title {
+      font-size: 28px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--text-primary);
+    }
+
+    .slide-num {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      background: var(--bg-subtle);
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      flex-shrink: 0;
+    }
+
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 20px;
+      min-height: 0;
+    }
+
+    .slide-foot {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-hairline);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    /* Soft Clean Inner Cards */
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .grid-asymmetric { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 22px; }
+
+    .card-soft {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card-white {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      padding: 20px 22px;
+      box-shadow: 0 1px 2px rgba(16, 16, 24, 0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .hero-num {
+      font-size: 56px;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      color: var(--text-primary);
+    }
+
+    .hero-unit {
+      font-size: 16px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      margin-left: 4px;
+    }
+
+    .title-md {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.25;
+      color: var(--text-primary);
+    }
+
+    .body-txt {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .body-txt strong { color: var(--text-primary); font-weight: 500; }
+
+    /* Chips & Status Pills */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+    }
+
+    .dot { width: 8px; height: 8px; border-radius: var(--radius-full); display: inline-block; flex-shrink: 0; }
+    .dot-blue { background: var(--data-blue); }
+    .dot-purple { background: var(--data-purple); }
+    .dot-orange { background: var(--data-orange); }
+    .dot-green { background: var(--data-green); }
+    .dot-red { background: var(--data-red); }
+
+    .state-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .st-clear { background: var(--tint-green); color: #137327; }
+    .st-congested { background: var(--tint-orange); color: #A85200; }
+    .st-gridlocked { background: var(--tint-red); color: #B42318; }
+    .st-blue { background: var(--tint-blue); color: #1545BD; }
+    .st-purple { background: var(--tint-purple); color: #831FB8; }
+
+    /* Slide 1 Cover Hero */
+    .cover-hero {
+      display: grid;
+      grid-template-columns: 1.25fr 0.95fr;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .cover-title {
+      font-size: 42px;
+      font-weight: 500;
+      letter-spacing: -0.025em;
+      line-height: 1.1;
+      color: var(--text-primary);
+      margin: 10px 0 14px;
+    }
+
+    .cover-sub {
+      font-size: 16px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      max-width: 560px;
+    }
+
+    .kpi-stack {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .kpi-stack .card-soft:first-child {
+      grid-column: 1 / -1;
+    }
+
+    /* Tables */
+    table.clean-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    table.clean-table th {
+      text-align: left;
+      font-weight: 500;
+      color: var(--text-secondary);
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-card);
+      white-space: nowrap;
+    }
+
+    table.clean-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-hairline);
+      color: var(--text-primary);
+      vertical-align: top;
+    }
+
+    table.clean-table tr:last-child td { border-bottom: none; }
+
+    code.mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      background: var(--bg-subtle);
+      padding: 2px 6px;
+      border-radius: var(--radius-xs);
+      color: var(--text-primary);
+    }
+
+    /* SVG Container */
+    .diagram-box {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      padding: 14px 18px;
+      width: 100%;
+    }
+
+    .diagram-box svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Mock Camera Card (exact PoC metrics layout) */
+    .cam-mock {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .cam-mock-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+
+    .cam-mock-screen {
+      background: #14161B;
+      border-radius: var(--radius-md);
+      padding: 16px;
+      min-height: 120px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: #F5F5F7;
+      overflow: hidden;
+    }
+
+    .cam-mock-zone {
+      border: 2px dashed rgba(31, 95, 255, 0.85);
+      background: rgba(31, 95, 255, 0.14);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #D9E8FF;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .cam-mock-badge {
+      align-self: flex-start;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 600;
+      color: #FFFFFF;
+      background: var(--data-green);
+      transition: background 0.2s ease;
+    }
+
+    .cam-metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 14px;
+      background: var(--bg-subtle);
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .cam-metrics-grid strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* Interactive Simulator Controls */
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .preset-btn {
+      border: 1px solid var(--border-card);
+      background: var(--bg-subtle);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 7px 12px;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .preset-btn:hover { background: var(--bg-subtle-hover); }
+    .preset-btn.active {
+      background: var(--ink);
+      color: #FFFFFF;
+      border-color: var(--ink);
+    }
+
+    .slider-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px 18px;
+    }
+
+    .slider-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .slider-top strong { color: var(--text-primary); }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--ink);
+      cursor: pointer;
+    }
+
+    .rule-trace {
+      background: var(--bg-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text-primary);
+      border-left: 3px solid var(--data-blue);
+    }
+
+    /* List styling */
+    ul.clean-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    ul.clean-list li {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      padding-left: 16px;
+      position: relative;
+    }
+
+    ul.clean-list li::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: var(--radius-full);
+      background: var(--text-tertiary);
+      position: absolute;
+      left: 0;
+      top: 7px;
+    }
+
+    ul.clean-list li strong { color: var(--text-primary); font-weight: 500; }
+
+    /* Document Scroll Mode (optional toggle) */
+    body.doc-mode .slide {
+      aspect-ratio: auto;
+      min-height: 540px;
+    }
+
+    /* Responsive fallback for smaller screens */
+    @media (max-width: 1024px) {
+      .slide {
+        aspect-ratio: auto;
+        padding: 24px 20px;
+        border-radius: 20px;
+      }
+      .cover-hero, .grid-2, .grid-3, .grid-4, .grid-asymmetric, .slider-grid {
+        grid-template-columns: 1fr;
+      }
+      .cover-title { font-size: 30px; }
+      .slide-title { font-size: 22px; }
+      .hero-num { font-size: 40px; }
+      .deck-controls { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      * { transition: none !important; }
+    }
+
+    @media print {
+      .deck-bar { display: none; }
+      .deck { padding: 0; gap: 16px; }
+      .slide {
+        break-inside: avoid;
+        box-shadow: none;
+        aspect-ratio: 16 / 9;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="deck-bar">
+    <div class="deck-bar-inner">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span>ATIN · PoC Đánh giá Ùn tắc Giao thông</span>
+      </div>
+      <nav class="slide-pills" aria-label="Điều hướng slide">
+        <button type="button" class="slide-pill active" data-target="slide-1">1. Tổng quan</button>
+        <button type="button" class="slide-pill" data-target="slide-2">2. Kiến trúc</button>
+        <button type="button" class="slide-pill" data-target="slide-3">3. Phương án 1 &amp; 2</button>
+        <button type="button" class="slide-pill" data-target="slide-4">4. Chỉ số &amp; Ngưỡng</button>
+        <button type="button" class="slide-pill" data-target="slide-5">5. Mô phỏng</button>
+        <button type="button" class="slide-pill" data-target="slide-6">6. Che khuất &amp; State</button>
+        <button type="button" class="slide-pill" data-target="slide-7">7. Kết quả &amp; Vá lỗi</button>
+      </nav>
+      <div class="deck-controls">
+        <button type="button" class="btn-ctrl" id="btn-prev" title="Slide trước (←)">←</button>
+        <button type="button" class="btn-ctrl" id="btn-next" title="Slide tiếp (→)">→</button>
+        <button type="button" class="btn-ctrl" id="btn-mode">Tỷ lệ 16:9</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="deck">
+    <!-- SLIDE 1: COVER & VALUE PROPOSITION -->
+    <section id="slide-1" class="slide" aria-labelledby="s1-title">
+      <div class="slide-head">
+        <div>
+          <div class="slide-kicker">ATIN Company · PoC Phase 1 Solution Overview</div>
+          <h1 id="s1-title" class="slide-title">Tổng quan Giải pháp Đánh giá Ùn tắc</h1>
+        </div>
+        <span class="slide-num">01 / 07</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="cover-hero">
+          <div>
+            <div class="preset-row" style="margin-bottom: 12px;">
+              <span class="state-pill st-clear"><span class="dot dot-green"></span>CLEAR · Thông thoáng</span>
+              <span class="state-pill st-congested"><span class="dot dot-orange"></span>CONGESTED · Ùn ứ</span>
+              <span class="state-pill st-gridlocked"><span class="dot dot-red"></span>GRIDLOCKED · Kẹt cứng</span>
+            </div>
+            <h2 class="cover-title">Phân biệt xe đông chạy nhanh với xe kẹt cứng tại chỗ.</h2>
+            <p class="cover-sub">
+              Đếm xe đơn thuần dễ báo nhầm khi đường đông nhưng thoát nhanh, hoặc khi xe tải/xe buýt che khuất camera.
+              Hệ thống PoC kết hợp đồng thời <strong>Phương án 1</strong> (theo dõi quỹ đạo &amp; thời gian trong Poly Zone)
+              và <strong>Phương án 2</strong> (độ phủ thị giác MOG2 + vận tốc dòng chảy Farneback).
+            </p>
+          </div>
+
+          <div class="kpi-stack">
+            <div class="card-soft">
+              <div class="card-label">
+                <span>Chu kỳ suy luận GPU tập trung (GpuBatcher)</span>
+                <span class="chip"><span class="dot dot-blue"></span>Batch FP16</span>
+              </div>
+              <div>
+                <span class="hero-num">66.7</span><span class="hero-unit">ms / chu kỳ (~15 FPS)</span>
+              </div>
+            </div>
+            <div class="card-soft">
+              <div class="card-label"><span>Đầu vào chuẩn hóa</span></div>
+              <div><span class="hero-num" style="font-size:36px;">720p</span><span class="hero-unit">buffer = 1</span></div>
+            </div>
+            <div class="card-soft">
+              <div class="card-label"><span>Kiểm thử tự động</span></div>
+              <div><span class="hero-num" style="font-size:36px;">25/25</span><span class="hero-unit">passed</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-foot">
+        <span>Phạm vi PoC: 1 tiến trình Python hợp nhất · Hỗ trợ tối đa 8 camera RTSP</span>
+        <span>Điều hướng: phím ← / → hoặc cuộn trang</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: SYSTEM ARCHITECTURE -->
+    <section id="slide-2" class="slide" aria-labelledby="s2-title">
+      <div class="slide-head">
+        <div>
+          <div class="slide-kicker">Kiến trúc triển khai thực tế · poc/backend + poc/frontend</div>
+          <h2 id="s2-title" class="slide-title">Kiến trúc 1 Tiến trình &amp; Đường truyền Video H.265</h2>
+        </div>
+        <span class="slide-num">02 / 07</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="diagram-box">
+          <svg viewBox="0 0 1120 260" role="img" aria-label="Sơ đồ luồng dữ liệu từ Camera RTSP qua MediaMTX, AI Engine và FastAPI tới Trình duyệt">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#6B6B76"></path>
+              </marker>
+              <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#1F5FFF"></path>
+              </marker>
+            </defs>
+
+            <!-- Boundary: Python Process -->
+            <rect x="370" y="14" width="520" height="232" rx="20" fill="#FFFFFF" stroke="#E9E9EE" stroke-width="1.5"></rect>
+            <text x="390" y="38" font-size="12" font-weight="600" fill="#6B6B76">1 tiến trình Python · uvicorn :28080 (poc/backend/main.py)</text>
+
+            <!-- Camera -->
+            <rect x="16" y="84" width="140" height="84" rx="14" fill="#FFFFFF" stroke="#E9E9EE" stroke-width="1.5"></rect>
+            <text x="86" y="114" text-anchor="middle" font-size="14" font-weight="600" fill="#0B0B0F">Camera RTSP</text>
+            <text x="86" y="135" text-anchor="middle" font-size="12" fill="#6B6B76">H.264 / H.265</text>
+            <text x="86" y="152" text-anchor="middle" font-size="11" fill="#9A9AA5">1–8 luồng</text>
+
+            <!-- MediaMTX -->
+            <rect x="196" y="72" width="144" height="108" rx="14" fill="#FFFFFF" stroke="#E9E9EE" stroke-width="1.5"></rect>
+            <text x="268" y="102" text-anchor="middle" font-size="14" font-weight="600" fill="#0B0B0F">MediaMTX</text>
+            <text x="268" y="123" text-anchor="middle" font-size="12" fill="#6B6B76">RTSP :28554</text>
+            <text x="268" y="142" text-anchor="middle" font-size="12" fill="#6B6B76">WebRTC :28889</text>
+            <text x="268" y="162" text-anchor="middle" font-size="11" fill="#9A9AA5">1 kết nối tới cam</text>
+
+            <!-- StreamReader -->
+            <rect x="392" y="64" width="145" height="72" rx="12" fill="#F4F4F6" stroke="#EFEFF2"></rect>
+            <text x="464" y="92" text-anchor="middle" font-size="13" font-weight="600" fill="#0B0B0F">StreamReader</text>
+            <text x="464" y="110" text-anchor="middle" font-size="11.5" fill="#6B6B76">720p @ 15 FPS</text>
+            <text x="464" y="125" text-anchor="middle" font-size="11" fill="#9A9AA5">OpenCV TCP · buf=1</text>
+
+            <!-- GpuBatcher -->
+            <rect x="562" y="64" width="148" height="72" rx="12" fill="#EEF3FF" stroke="#D9E8FF"></rect>
+            <text x="636" y="92" text-anchor="middle" font-size="13" font-weight="600" fill="#1545BD">GpuBatcher</text>
+            <text x="636" y="110" text-anchor="middle" font-size="11.5" fill="#1F5FFF">YOLO Batch FP16</text>
+            <text x="636" y="125" text-anchor="middle" font-size="11" fill="#6B6B76">ROI crop + 10% lề</text>
+
+            <!-- CameraProcessor -->
+            <rect x="734" y="64" width="138" height="72" rx="12" fill="#F6EEFD" stroke="#E6DDFB"></rect>
+            <text x="803" y="92" text-anchor="middle" font-size="13" font-weight="600" fill="#831FB8">CameraProcessor</text>
+            <text x="803" y="110" text-anchor="middle" font-size="11.5" fill="#6B6B76">PA 1 + PA 2</text>
+            <text x="803" y="125" text-anchor="middle" font-size="11" fill="#6B6B76">Occlusion + State</text>
+
+            <!-- FastAPI + ResultStore -->
+            <rect x="562" y="158" width="310" height="70" rx="12" fill="#F4F4F6" stroke="#EFEFF2"></rect>
+            <text x="717" y="185" text-anchor="middle" font-size="13" font-weight="600" fill="#0B0B0F">FastAPI + ResultStore + EventStore</text>
+            <text x="717" y="204" text-anchor="middle" font-size="11.5" fill="#6B6B76">MJPEG /mjpeg (H.265) · WebSocket /ws (5 Hz) · Snapshot JPEG</text>
+
+            <!-- Browser -->
+            <rect x="928" y="84" width="176" height="92" rx="14" fill="#FFFFFF" stroke="#E9E9EE" stroke-width="1.5"></rect>
+            <text x="1016" y="114" text-anchor="middle" font-size="14" font-weight="600" fill="#0B0B0F">Dashboard Web</text>
+            <text x="1016" y="135" text-anchor="middle" font-size="12" fill="#6B6B76">MJPEG + Canvas BBox</text>
+            <text x="1016" y="154" text-anchor="middle" font-size="11" fill="#9A9AA5">Vẽ Poly Zone · Sự kiện</text>
+
+            <!-- Arrows -->
+            <line x1="156" y1="126" x2="192" y2="126" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arrow)"></line>
+            <line x1="340" y1="100" x2="388" y2="100" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arrow)"></line>
+            <line x1="537" y1="100" x2="558" y2="100" stroke="#1F5FFF" stroke-width="1.6" marker-end="url(#arrow-blue)"></line>
+            <line x1="710" y1="100" x2="730" y2="100" stroke="#1F5FFF" stroke-width="1.6" marker-end="url(#arrow-blue)"></line>
+            <line x1="803" y1="136" x2="803" y2="154" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arrow)"></line>
+            <line x1="464" y1="136" x2="558" y2="192" stroke="#6B6B76" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arrow)"></line>
+            <line x1="872" y1="192" x2="924" y2="144" stroke="#1F5FFF" stroke-width="1.8" marker-end="url(#arrow-blue)"></line>
+          </svg>
+        </div>
+
+        <div class="grid-3">
+          <div class="card-soft">
+            <div class="card-label"><span>Gộp AI vào Backend</span><span class="dot dot-blue"></span></div>
+            <div class="title-md">Không tốn chi phí serialize ảnh</div>
+            <p class="body-txt">Toàn bộ <code class="mono">ai/</code> chạy dưới dạng thread nền trong tiến trình FastAPI, đọc trực tiếp frame từ RAM để suy luận và xuất MJPEG.</p>
+          </div>
+          <div class="card-soft">
+            <div class="card-label"><span>Tương thích H.265 thực tế</span><span class="dot dot-orange"></span></div>
+            <div class="title-md">MJPEG làm mặc định ổn định</div>
+            <p class="body-txt">Camera thực tế xuất H.265 không chạy được trên WebRTC trình duyệt. Backend OpenCV giải mã sẵn nên MJPEG hiển thị được mọi loại camera.</p>
+          </div>
+          <div class="card-soft">
+            <div class="card-label"><span>An toàn server dùng chung</span><span class="dot dot-green"></span></div>
+            <div class="title-md">Dải port 28xxx &amp; uv cô lập</div>
+            <p class="body-txt">Cô lập thư viện trong <code class="mono">poc/backend/.venv</code> và mở port <code class="mono">28080/28554/28889/28189</code> qua SSH tunnel.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-foot">
+        <span>Tệp nguồn: poc/backend/main.py · poc/backend/mediamtx.py · poc/backend/ai/engine/</span>
+        <span>02 / 07</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: OPTION 1 & OPTION 2 -->
+    <section id="slide-3" class="slide" aria-labelledby="s3-title">
+      <div class="slide-head">
+        <div>
+          <div class="slide-kicker">Lõi thuật toán AI · Chạy song song trên mỗi khung hình</div>
+          <h2 id="s3-title" class="slide-title">Phương án 1 (Vi mô) &amp; Phương án 2 (Vĩ mô)</h2>
+        </div>
+        <span class="slide-num">03 / 07</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2">
+          <!-- Option 1 -->
+          <div class="card-soft">
+            <div class="card-label">
+              <span>Phương án 1 · <code class="mono">ai/core_pipeline/</code></span>
+              <span class="state-pill st-blue">Đối tượng &amp; Thời gian</span>
+            </div>
+            <div class="title-md">Theo dõi từng xe &amp; đo thời gian lưu trú trong Zone</div>
+            <ul class="clean-list">
+              <li><strong>Detector (YOLO batch FP16)</strong>: model <code class="mono">vehicle_n_best.pt</code> (<code class="mono">imgsz=640, conf=0.15, iou=0.5</code>), chỉ suy luận vùng ROI bao Poly Zone + 10% lề.</li>
+              <li><strong>Tracker (ByteTrack + Majority Voting)</strong>: <code class="mono">supervision.ByteTrack</code> riêng từng camera (<code class="mono">activation=0.45, buffer=2.5s, match=0.8</code>). Bầu chọn nhãn theo tổng <code class="mono">conf</code> suốt vòng đời track.</li>
+              <li><strong>Quy đổi nhóm &amp; trọng số</strong>: <code class="mono">motobike/bicycle → 2W (1.0)</code>; <code class="mono">car → 4W (3.0)</code>; <code class="mono">bus/truck → 4W (6.0)</code>. Điểm chân <code class="mono">foot</code> dùng xét vào/ra Poly Zone.</li>
+              <li><strong>ZoneTimeAnalyzer</strong>: tính <code class="mono">W_total</code> (EMA), trung vị thời gian qua zone <code class="mono">T50</code> (cửa sổ 15s, <code class="mono">travel ≥ 0.45 × axis</code>, <code class="mono">≥ 3</code> mẫu) và bách phân vị <code class="mono">D85</code> của xe đang kẹt (<code class="mono">≥ 1.5s</code>, <code class="mono">≥ 2</code> mẫu).</li>
+            </ul>
+          </div>
+
+          <!-- Option 2 -->
+          <div class="card-soft">
+            <div class="card-label">
+              <span>Phương án 2 · <code class="mono">ai/aux_pipeline/</code></span>
+              <span class="state-pill st-purple">Độ phủ &amp; Dòng chảy</span>
+            </div>
+            <div class="title-md">Đo mật độ thị giác &amp; tốc độ chuyển động toàn vùng</div>
+            <ul class="clean-list">
+              <li><strong>Thu nhỏ chuẩn hóa</strong>: resize khung hình về <code class="mono">320×180</code> để giữ chi phí CPU cực thấp.</li>
+              <li><strong>Trừ nền MOG2 thông minh</strong>: <code class="mono">history=500, varThreshold=25, detectShadows=True</code>. Chỉ giữ foreground mạnh (<code class="mono">255</code>), bỏ bóng đổ (<code class="mono">127</code>), lọc nhiễu <code class="mono">MORPH_OPEN 3×3</code>.</li>
+              <li><strong>Độ phủ hợp nhất (<code class="mono">O_vis</code>)</strong>: lấy phép hợp (<code class="mono">bitwise_or</code>) giữa mặt nạ MOG2 và mặt nạ BBox YOLO trong Poly Zone để bù khi track đứt gãy.</li>
+              <li><strong>MOG2 Learning Freeze</strong>: khi <code class="mono">V_flow &lt; 1.0 px/s</code> và có xe dừng <code class="mono">D85 &gt; 5.0s</code>, đặt <code class="mono">learningRate = 0.0</code> để xe đứng lâu không bị hòa vào nền.</li>
+              <li><strong>Farneback Optical Flow (<code class="mono">V_flow</code>)</strong>: tính vận tốc dịch chuyển trên vùng <code class="mono">occupied</code>, triệt nhiễu <code class="mono">&lt; 0.8 px</code>, làm mượt EMA (<code class="mono">α = 0.3</code>).</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card-white" style="flex-direction: row; align-items: center; justify-content: space-between; padding: 14px 20px;">
+          <div class="body-txt">
+            <strong>Vì sao phải chạy cả hai?</strong> Phương án 1 mạnh ở phân tách 2B/4B và đo chính xác xe đứng lâu; Phương án 2 giữ ổn định khi <strong>che khuất nặng</strong> hoặc kẹt đặc kín làm gãy ID ByteTrack (nhánh <em>Macro Rescue</em>).
+          </div>
+          <span class="chip">config.py · 100% đồng bộ</span>
+        </div>
+      </div>
+
+      <div class="slide-foot">
+        <span>Tệp nguồn: detector.py · tracker.py · zone_time.py · flow_occupancy.py</span>
+        <span>03 / 07</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: CAMERA CARD METRICS & THRESHOLD TABLE -->
+    <section id="slide-4" class="slide" aria-labelledby="s4-title">
+      <div class="slide-head">
+        <div>
+          <div class="slide-kicker">Giải thích chỉ số UI &amp; Bảng ngưỡng phân loại</div>
+          <h2 id="s4-title" class="slide-title">Ý nghĩa Thông số trên Ô Camera &amp; Ngưỡng Quyết định</h2>
+        </div>
+        <span class="slide-num">04 / 07</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-asymmetric">
+          <!-- Left: Threshold Table -->
+          <div class="card-white" style="padding: 16px 18px;">
+            <div class="card-label"><span>Bảng ngưỡng phân loại (<code class="mono">classifier.py</code> &amp; <code class="mono">config.py</code>)</span></div>
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>Trạng thái</th>
+                  <th>Mật độ (<code class="mono">W_total</code> / <code class="mono">O_vis</code>)</th>
+                  <th>Thời gian (<code class="mono">T50</code> / <code class="mono">D85</code>)</th>
+                  <th>Dòng chảy (<code class="mono">V_flow</code>)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="state-pill st-clear">CLEAR</span></td>
+                  <td><code class="mono">W &lt; 12.0</code> và <code class="mono">O_vis &lt; 35%</code></td>
+                  <td>Hoặc chưa đạt ngưỡng chậm</td>
+                  <td>Thoát nhanh (<code class="mono">≥ 6.0</code>)</td>
+                </tr>
+                <tr>
+                  <td><span class="state-pill st-congested">CONGESTED</span></td>
+                  <td><code class="mono">W ≥ 15.0</code> hoặc <code class="mono">O_vis ≥ 45%</code></td>
+                  <td><code class="mono">T50 &gt; 3.0s</code> hoặc <code class="mono">D85_4B &gt; 5.0s</code> / <code class="mono">2B &gt; 4.5s</code></td>
+                  <td>Hoặc <code class="mono">1.0 &lt; V &lt; 6.0</code> khi <code class="mono">O_vis ≥ 45%</code></td>
+                </tr>
+                <tr>
+                  <td><span class="state-pill st-gridlocked">GRIDLOCKED</span></td>
+                  <td><code class="mono">W ≥ 24.0</code> hoặc <code class="mono">O_vis ≥ 65%</code></td>
+                  <td>4B: <code class="mono">T50 &gt; 7s</code> / <code class="mono">D85 &gt; 10s</code><br/>2B: <code class="mono">T50 &gt; 5s</code> / <code class="mono">D85 &gt; 8s</code></td>
+                  <td><code class="mono">V_flow ≤ 1.0</code> hoặc <code class="mono">O_vis ≥ 70%</code></td>
+                </tr>
+                <tr>
+                  <td><span class="state-pill st-purple">Macro Rescue</span></td>
+                  <td><code class="mono">O_vis ≥ 75%</code> và <code class="mono">W ≥ 18.0</code></td>
+                  <td>Không cần <code class="mono">T50/D85</code> (bù đứt track)</td>
+                  <td><code class="mono">V_flow ≤ 1.0 px/s</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Right: Camera Card Metrics Breakdown -->
+          <div class="card-soft" style="padding: 16px 18px;">
+            <div class="card-label"><span>4 dòng thông số dưới mỗi ô Camera</span></div>
+            <div class="cam-metrics-grid" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+              <div>W: <strong>xx.z</strong> · 2B: <strong>a</strong> · 4B: <strong>b</strong></div>
+              <div>Phủ: <strong>nm%</strong> · Flow: <strong>jk.l</strong></div>
+              <div>T50 4B: <strong>c.ds</strong> · 2B: <strong>e.fs</strong></div>
+              <div>D85 4B: <strong>–</strong> · 2B: <strong>–</strong></div>
+            </div>
+            <ul class="clean-list" style="gap: 6px; margin-top: 4px;">
+              <li><strong>W / 2B / 4B</strong>: mật độ quy đổi (<code class="mono">2B×1, car×3, bus/truck×6</code>) và số xe 2 bánh / 4 bánh đang ở trong Poly Zone.</li>
+              <li><strong>Phủ / Flow</strong>: tỷ lệ diện tích bị chiếm (<code class="mono">O_vis</code>) và tốc độ dòng chảy quang học (<code class="mono">px/s</code> trên ảnh <code class="mono">320×180</code>).</li>
+              <li><strong>T50 4B / 2B</strong>: trung vị thời gian xe đi <em>xuyên qua</em> zone (cửa sổ 15s, cần <code class="mono">≥ 3</code> xe hoàn thành).</li>
+              <li><strong>D85 4B / 2B</strong>: thời gian xe <em>đang nằm kẹt</em> trong zone (bách phân vị 85). Hiện <code class="mono">–</code> khi đường thoáng vì cần <code class="mono">≥ 2</code> xe nằm trong zone <code class="mono">≥ 1.5s</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-foot">
+        <span>Ghi chú: Khi chỉ có &lt; 2 xe 4B trong zone, nhánh GRIDLOCKED tự chuyển sang điều kiện thuần 2B (T50 &gt; 5.5s hoặc D85 &gt; 8.5s)</span>
+        <span>04 / 07</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: INTERACTIVE CLASSIFIER SIMULATOR -->
+    <section id="slide-5" class="slide" aria-labelledby="s5-title">
+      <div class="slide-head">
+        <div>
+          <div class="slide-kicker">Kiểm chứng trực tiếp luật classify() của hệ thống</div>
+          <h2 id="s5-title" class="slide-title">Mô phỏng Tương tác: Thông số → Trạng thái Camera</h2>
+        </div>
+        <span class="slide-num">05 / 07</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="preset-row" role="group" aria-label="Kịch bản mẫu">
+          <button type="button" class="preset-btn active" data-preset="clear_fast">Đông nhưng chạy nhanh</button>
+          <button type="button" class="preset-btn" data-preset="night_parked">Đêm vắng / 1 xe đỗ</button>
+          <button type="button" class="preset-btn" data-preset="congested">Ùn ứ (4B chậm, 2B luồn)</button>
+          <button type="button" class="preset-btn" data-preset="gridlocked">Kẹt cứng hỗn hợp</button>
+          <button type="button" class="preset-btn" data-preset="rescue">Macro Rescue (đứt ID)</button>
+        </div>
+
+        <div class="grid-asymmetric" style="align-items: stretch;">
+          <div class="card-soft" style="justify-content: space-between;">
+            <div class="slider-grid">
+              <label class="slider-item">
+                <div class="slider-top"><span>Mật độ W_total</span><strong id="val-w">14.0</strong></div>
+                <input type="range" id="in-w" min="0" max="36" step="0.5" value="14" />
+              </label>
+              <label class="slider-item">
+                <div class="slider-top"><span>Độ phủ O_vis (%)</span><strong id="val-o">42%</strong></div>
+                <input type="range" id="in-o" min="0" max="100" step="1" value="42" />
+              </label>
+              <label class="slider-item">
+                <div class="slider-top"><span>Dòng chảy V_flow (px/s)</span><strong id="val-v">8.5</strong></div>
+                <input type="range" id="in-v" min="0" max="15" step="0.2" value="8.5" />
+              </label>
+              <label class="slider-item">
+                <div class="slider-top"><span>T50 4B (giây)</span><strong id="val-t4">1.8s</strong></div>
+                <input type="range" id="in-t4" min="0" max="15" step="0.5" value="1.8" />
+              </label>
+              <label class="slider-item">
+                <div class="slider-top"><span>D85 4B (giây, 0 = –)</span><strong id="val-d4">–</strong></div>
+                <input type="range" id="in-d4" min="0" max="20" step="0.5" value="0" />
+              </label>
+              <label class="slider-item">
+                <div class="slider-top"><span>T50 / D85 2B (giây)</span><strong id="val-t2">1.5s</strong></div>
+                <input type="range" id="in-t2" min="0" max="15" step="0.5" value="1.5" />
+              </label>
+            </div>
+            <div id="sim-reason" class="rule-trace">
+              Nhánh kích hoạt: <strong>CLEAR</strong> — Xe đông vừa phải nhưng tốc độ thoát nhanh (V_flow ≥ 6.0, T50 ≤ 3.0s).
+            </div>
+          </div>
+
+          <!-- Live Mock Camera Card -->
+          <div class="cam-mock">
+            <div class="cam-mock-head">
+              <div><span class="chip">cam1</span> <strong>Nút giao Demo</strong></div>
+              <span class="body-txt" style="font-size: 12px;">MJPEG · 15.0 FPS</span>
+            </div>
+            <div class="cam-mock-screen">
+              <div id="mock-badge" class="cam-mock-badge">THÔNG THOÁNG</div>
+              <div class="cam-mock-zone">
+                <span>Poly Zone ROI</span>
+                <span id="mock-counts">2B: 5 · 4B: 3</span>
+              </div>
+            </div>
+            <div class="cam-metrics-grid">
+              <div>W: <strong id="m-w">14.0</strong> · 2B: <strong id="m-2w">5</strong> · 4B: <strong id="m-4w">3</strong></div>
+              <div>Phủ: <strong id="m-o">42%</strong> · Flow: <strong id="m-v">8.5</strong></div>
+              <div>T50 4B: <strong id="m-t4">1.8s</strong> · 2B: <strong id="m-t2">1.5s</strong></div>
+              <div>D85 4B: <strong id="m-d4">–</strong> · 2B: <strong id="m-d2">–</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-foot">
+        <span>Logic chạy trực tiếp bằng đúng hàm classify() trong poc/backend/ai/decision/classifier.py</span>
+        <span>05 / 07</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: OCCLUSION SHIELD & STATE MACHINE -->
+    <section id="slide-6" class="slide" aria-labelledby="s6-title">
+      <div class="slide-head">
+        <div>
+          <div class="slide-kicker">Chống nhiễu &amp; Chống báo giả · occlusion.py + state_machine.py</div>
+          <h2 id="s6-title" class="slide-title">Lá chắn Che khuất &amp; Máy Trạng thái 2 Tầng</h2>
+        </div>
+        <span class="slide-num">06 / 07</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="diagram-box">
+          <svg viewBox="0 0 1120 175" role="img" aria-label="Sơ đồ chuyển trạng thái Provisional và Confirmed Event">
+            <defs>
+              <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#6B6B76"></path>
+              </marker>
+            </defs>
+            <!-- Raw -->
+            <rect x="16" y="42" width="160" height="90" rx="14" fill="#FFFFFF" stroke="#E9E9EE" stroke-width="1.5"></rect>
+            <text x="96" y="72" text-anchor="middle" font-size="13" font-weight="600" fill="#0B0B0F">Raw classify()</text>
+            <text x="96" y="92" text-anchor="middle" font-size="11.5" fill="#6B6B76">Mỗi 66.7ms</text>
+            <text x="96" y="110" text-anchor="middle" font-size="11" fill="#9A9AA5">CLEAR/CONG/GRID</text>
+
+            <!-- Occlusion -->
+            <rect x="216" y="42" width="190" height="90" rx="14" fill="#FFF3E6" stroke="#FFD6A8" stroke-width="1.5"></rect>
+            <text x="311" y="70" text-anchor="middle" font-size="13" font-weight="600" fill="#A85200">OcclusionShield</text>
+            <text x="311" y="90" text-anchor="middle" font-size="11.5" fill="#6B6B76">Heavy &gt;35% hoặc tụt &gt;60%</text>
+            <text x="311" y="108" text-anchor="middle" font-size="11" fill="#A85200">HOLD tối đa 30s → UNKNOWN</text>
+
+            <!-- Provisional -->
+            <rect x="446" y="34" width="270" height="106" rx="14" fill="#EEF3FF" stroke="#D9E8FF" stroke-width="1.5"></rect>
+            <text x="581" y="62" text-anchor="middle" font-size="13" font-weight="600" fill="#1545BD">Tầng 1: Provisional (Live UI)</text>
+            <text x="581" y="84" text-anchor="middle" font-size="11.5" fill="#0B0B0F">Làm mượt đa số cửa sổ 5.0s</text>
+            <text x="581" y="103" text-anchor="middle" font-size="11.5" fill="#6B6B76">Exit Hysteresis: cần 15.0s CLEAR</text>
+            <text x="581" y="121" text-anchor="middle" font-size="11" fill="#6B6B76">liên tục mới hạ xuống CLEAR</text>
+
+            <!-- Confirmed -->
+            <rect x="756" y="26" width="346" height="122" rx="14" fill="#FDECEC" stroke="#F7C7C4" stroke-width="1.5"></rect>
+            <text x="929" y="54" text-anchor="middle" font-size="13" font-weight="600" fill="#B42318">Tầng 2: Confirmed Event + Snapshot</text>
+            <text x="929" y="76" text-anchor="middle" font-size="11.5" fill="#0B0B0F">Chuẩn: 60s (90s đèn đỏ) / 120s kẹt cứng</text>
+            <text x="929" y="95" text-anchor="middle" font-size="11.5" fill="#1F5FFF">DEMO_MODE=1: 15s (20s đèn đỏ) / 30s</text>
+            <text x="929" y="114" text-anchor="middle" font-size="11" fill="#6B6B76">Dung sai nhấp nháy 5.0s · Cooldown 60s</text>
+            <text x="929" y="131" text-anchor="middle" font-size="11" fill="#B42318">CONGESTED → GRIDLOCKED bỏ qua cooldown</text>
+
+            <line x1="176" y1="87" x2="212" y2="87" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arr2)"></line>
+            <line x1="406" y1="87" x2="442" y2="87" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arr2)"></line>
+            <line x1="716" y1="87" x2="752" y2="87" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arr2)"></line>
+          </svg>
+        </div>
+
+        <div class="grid-3">
+          <div class="card-soft">
+            <div class="card-label"><span>Kịch bản che khuất A</span></div>
+            <div class="title-md">Xe lớn chiếm &gt; 35% Zone</div>
+            <p class="body-txt">Khi diện tích BBox của <code class="mono">bus</code>/<code class="mono">truck</code> phủ quá 35% Poly Zone, hệ thống đóng băng trạng thái (<code class="mono">HOLD</code>) thay vì báo thoáng giả.</p>
+          </div>
+          <div class="card-soft">
+            <div class="card-label"><span>Kịch bản che khuất B</span></div>
+            <div class="title-md">Tụt BBox &gt; 60% nhưng Phủ &gt; 70%</div>
+            <p class="body-txt">Nếu số xe nhận diện tụt mạnh trong 2s gần nhất nhưng độ phủ thị giác <code class="mono">O_vis</code> vẫn cao, giữ nguyên trạng thái chờ qua che khuất.</p>
+          </div>
+          <div class="card-soft">
+            <div class="card-label"><span>Chống báo giả đèn đỏ</span></div>
+            <div class="title-md">Ngưỡng 90s cho nút có đèn</div>
+            <p class="body-txt">Khi bật tùy chọn <em>Có đèn tín hiệu</em> trên camera, chu kỳ dừng đèn đỏ thông thường (&lt; 90s) sẽ không tạo sự kiện ùn tắc giả.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-foot">
+        <span>Mất tín hiệu RTSP quá 5.0s tự động chuyển badge thành MẤT TÍN HIỆU (UNKNOWN)</span>
+        <span>06 / 07</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: IMPLEMENTATION STATUS & RESOLVED ISSUES -->
+    <section id="slide-7" class="slide" aria-labelledby="s7-title">
+      <div class="slide-head">
+        <div>
+          <div class="slide-kicker">Kiểm chứng &amp; Kinh nghiệm vận hành thực địa</div>
+          <h2 id="s7-title" class="slide-title">Trạng thái Hoàn thiện &amp; 7 Sự cố Đã Xử lý Triệt để</h2>
+        </div>
+        <span class="slide-num">07 / 07</span>
+      </div>
+
+      <div class="slide-body">
+        <div class="card-white" style="padding: 14px 18px;">
+          <table class="clean-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Sự cố gặp phải khi chạy PoC</th>
+                <th>Nguyên nhân gốc rễ</th>
+                <th>Giải pháp đã triển khai (Commit)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td>Trùng port trên server GPU dùng chung</td>
+                <td>Port 8080/8554/8889 đụng tiến trình khác</td>
+                <td>Chuyển sang dải <code class="mono">28080/28554/28889/28189</code> (<code class="mono">46d37d2</code>)</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>Thiếu <code class="mono">sv.ByteTrack</code> khi <code class="mono">uv sync</code></td>
+                <td><code class="mono">supervision 0.31.7</code> đổi API top-level</td>
+                <td>Ghim <code class="mono">supervision&lt;0.27.0</code> (<code class="mono">0.26.1</code>) (<code class="mono">7c4616d</code>)</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td>Nghẽn MJPEG khi reload hoặc sửa camera</td>
+                <td>Generator không check disconnect; card cũ giữ <code class="mono">src</code></td>
+                <td>Check <code class="mono">is_disconnected()</code> + <code class="mono">CameraCard.destroy()</code> (<code class="mono">0d1a6c0</code>)</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td>WebRTC báo lỗi codec &amp; màn hình đen</td>
+                <td>Camera thực tế phát <strong>H.265</strong> (WebRTC không hỗ trợ)</td>
+                <td>Đặt mặc định sang <strong>MJPEG</strong> giải mã qua OpenCV (<code class="mono">fec920a</code>)</td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td>Trình duyệt giữ WebRTC cũ sau khi pull</td>
+                <td><code class="mono">localStorage</code> lưu key cũ ghi đè mặc định</td>
+                <td>Đổi key sang <code class="mono">video_mode_v2_*</code> + trạng thái <em>Đang lưu...</em> (<code class="mono">cd03fad</code>)</td>
+              </tr>
+              <tr>
+                <td>6</td>
+                <td>Nhấn <code class="mono">Ctrl+C</code> không tắt được server</td>
+                <td>Uvicorn chờ vô hạn luồng MJPEG đang mở</td>
+                <td>Thêm <code class="mono">--timeout-graceful-shutdown 3</code> &amp; <code class="mono">exec</code> (<code class="mono">1d97936</code>)</td>
+              </tr>
+              <tr>
+                <td>7</td>
+                <td><strong>Đơ toàn bộ UI &amp; Server khi Lưu Setting / Zone</strong></td>
+                <td><strong>Self-deadlock</strong>: <code class="mono">update_meta</code> &amp; <code class="mono">set_zone</code> dùng chung <code class="mono">Lock()</code></td>
+                <td>Đổi sang <code class="mono">RLock()</code> + <code class="mono">_set_zone_unlocked()</code> + test (<code class="mono">1ed27c9</code>)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid-3">
+          <div class="card-soft">
+            <div class="card-label"><span>Kiểm thử tự động</span><span class="dot dot-green"></span></div>
+            <div class="title-md">25 / 25 tests đạt 100%</div>
+            <p class="body-txt"><code class="mono">uv run pytest ai/tests tests -v</code> kiểm tra đủ Classifier, ZoneTime, Occlusion, StateMachine, Tracker, Deadlock &amp; API.</p>
+          </div>
+          <div class="card-soft">
+            <div class="card-label"><span>Khởi chạy khuyến nghị</span><span class="dot dot-blue"></span></div>
+            <div class="title-md">Chạy trực tiếp qua uv run</div>
+            <p class="body-txt"><code class="mono">uv run uvicorn main:app --host 0.0.0.0 --port 28080 --timeout-graceful-shutdown 3</code></p>
+          </div>
+          <div class="card-soft">
+            <div class="card-label"><span>Bước tiếp theo</span><span class="dot dot-orange"></span></div>
+            <div class="title-md">Nghiệm thu thực địa G4</div>
+            <p class="body-txt">Vẽ Poly Zone trên camera thực tế, tinh chỉnh ngưỡng <code class="mono">W_total / O_vis</code> theo góc quay thực tế và xuất log demo.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-foot">
+        <span>ATIN · Traffic Congestion Evaluation PoC Phase 1 · Báo cáo chi tiết: poc/implement/06-implementation-report.md</span>
+        <span>07 / 07</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Slide navigation & keyboard support
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const pills = Array.from(document.querySelectorAll('.slide-pill'));
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const btnMode = document.getElementById('btn-mode');
+    let currentIdx = 0;
+
+    function setActivePill(idx) {
+      currentIdx = Math.max(0, Math.min(slides.length - 1, idx));
+      pills.forEach((p, i) => p.classList.toggle('active', i === currentIdx));
+    }
+
+    function goToSlide(idx) {
+      const clamped = Math.max(0, Math.min(slides.length - 1, idx));
+      slides[clamped].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setActivePill(clamped);
+    }
+
+    pills.forEach((p, i) => p.addEventListener('click', () => goToSlide(i)));
+    btnPrev.addEventListener('click', () => goToSlide(currentIdx - 1));
+    btnNext.addEventListener('click', () => goToSlide(currentIdx + 1));
+
+    btnMode.addEventListener('click', () => {
+      const isDoc = document.body.classList.toggle('doc-mode');
+      btnMode.textContent = isDoc ? 'Cuộn tài liệu' : 'Tỷ lệ 16:9';
+    });
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const idx = slides.indexOf(entry.target);
+            if (idx !== -1) setActivePill(idx);
+          }
+        });
+      },
+      { threshold: 0.55 }
+    );
+    slides.forEach((s) => observer.observe(s));
+
+    document.addEventListener('keydown', (e) => {
+      if (e.target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        goToSlide(currentIdx + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        goToSlide(currentIdx - 1);
+      } else if (e.key >= '1' && e.key <= '7') {
+        goToSlide(Number(e.key) - 1);
+      }
+    });
+
+    // Exact Python classify() logic from poc/backend/ai/decision/classifier.py
+    const inW = document.getElementById('in-w');
+    const inO = document.getElementById('in-o');
+    const inV = document.getElementById('in-v');
+    const inT4 = document.getElementById('in-t4');
+    const inD4 = document.getElementById('in-d4');
+    const inT2 = document.getElementById('in-t2');
+    const presetBtns = Array.from(document.querySelectorAll('.preset-btn'));
+
+    const PRESETS = {
+      clear_fast: { w: 14.0, o: 42, v: 8.5, t4: 1.8, d4: 0, t2: 1.5, n2: 5, n4: 3 },
+      night_parked: { w: 3.0, o: 12, v: 0.2, t4: 0, d4: 12, t2: 0, n2: 0, n4: 1 },
+      congested: { w: 18.0, o: 52, v: 3.2, t4: 4.5, d4: 6.0, t2: 3.5, n2: 6, n4: 4 },
+      gridlocked: { w: 28.0, o: 72, v: 0.4, t4: 9.0, d4: 13.0, t2: 6.5, n2: 10, n4: 6 },
+      rescue: { w: 20.0, o: 82, v: 0.5, t4: 0, d4: 0, t2: 0, n2: 4, n4: 4 },
+    };
+    let simN2 = 5;
+    let simN4 = 3;
+
+    function runClassify(m) {
+      const gt = (x, th) => x !== null && x > th;
+      if (m.w < 12.0 && m.o < 0.35) {
+        return { state: 'CLEAR', reason: 'W_total < 12.0 và O_vis < 35% (đường thoáng / ít xe).' };
+      }
+      const denseG = m.w >= 24.0 || m.o >= 0.65;
+      const stall4w = gt(m.t4, 7.0) || gt(m.d4, 10.0);
+      const stall2w = gt(m.t2, 5.0) || gt(m.d2, 8.0);
+      const timeOk = m.n4 < 2 ? (gt(m.t2, 5.5) || gt(m.d2, 8.5)) : (stall4w && (stall2w || m.n2 === 0));
+      const macroOk = m.v <= 1.0 || m.o >= 0.70;
+      if (denseG && timeOk && macroOk) {
+        return { state: 'GRIDLOCKED', reason: 'Mật độ cao (W ≥ 24 hoặc Phủ ≥ 65%) + dừng lâu (T50/D85) + V_flow ≤ 1.0.' };
+      }
+      if (m.o >= 0.75 && m.v <= 1.0 && m.w >= 18.0) {
+        return { state: 'GRIDLOCKED', reason: 'Nhánh Macro Rescue: Phủ ≥ 75%, V_flow ≤ 1.0 và W ≥ 18.0 (bù gãy track ByteTrack).' };
+      }
+      const denseC = m.w >= 15.0 || m.o >= 0.45;
+      const slow = gt(m.t4, 3.0) || gt(m.d4, 5.0) || gt(m.t2, 3.0) || gt(m.d2, 4.5) || (m.v > 1.0 && m.v < 6.0 && m.o >= 0.45);
+      if (denseC && slow) {
+        return { state: 'CONGESTED', reason: 'Mật độ đông (W ≥ 15 hoặc Phủ ≥ 45%) kèm di chuyển chậm (T50/D85 hoặc V_flow 1–6).' };
+      }
+      return { state: 'CLEAR', reason: 'Có xe trong vùng nhưng tốc độ thoát tốt, chưa thỏa điều kiện ùn tắc.' };
+    }
+
+    function updateSim() {
+      const w = Number(inW.value);
+      const oPct = Number(inO.value);
+      const v = Number(inV.value);
+      const t4 = Number(inT4.value) || null;
+      const d4 = Number(inD4.value) || null;
+      const t2 = Number(inT2.value) || null;
+      const d2 = d4 ? Math.max(0, d4 - 2.0) : null;
+
+      document.getElementById('val-w').textContent = w.toFixed(1);
+      document.getElementById('val-o').textContent = `${oPct}%`;
+      document.getElementById('val-v').textContent = v.toFixed(1);
+      document.getElementById('val-t4').textContent = t4 ? `${t4.toFixed(1)}s` : '–';
+      document.getElementById('val-d4').textContent = d4 ? `${d4.toFixed(1)}s` : '–';
+      document.getElementById('val-t2').textContent = t2 ? `${t2.toFixed(1)}s` : '–';
+
+      const res = runClassify({ w, o: oPct / 100, v, t4, d4, t2, d2, n2: simN2, n4: simN4 });
+      const badge = document.getElementById('mock-badge');
+      const labels = { CLEAR: ['THÔNG THOÁNG', '#1FA63A'], CONGESTED: ['ÙN Ứ', '#FF8A1F'], GRIDLOCKED: ['KẸT CỨNG', '#E5483D'] };
+      const [lbl, col] = labels[res.state];
+      badge.textContent = lbl;
+      badge.style.background = col;
+
+      document.getElementById('sim-reason').innerHTML = `Nhánh kích hoạt: <strong>${res.state}</strong> — ${res.reason}`;
+      document.getElementById('m-w').textContent = w.toFixed(1);
+      document.getElementById('m-2w').textContent = simN2;
+      document.getElementById('m-4w').textContent = simN4;
+      document.getElementById('mock-counts').textContent = `2B: ${simN2} · 4B: ${simN4}`;
+      document.getElementById('m-o').textContent = `${oPct}%`;
+      document.getElementById('m-v').textContent = v.toFixed(1);
+      document.getElementById('m-t4').textContent = t4 ? `${t4.toFixed(1)}s` : '–';
+      document.getElementById('m-t2').textContent = t2 ? `${t2.toFixed(1)}s` : '–';
+      document.getElementById('m-d4').textContent = d4 ? `${d4.toFixed(1)}s` : '–';
+      document.getElementById('m-d2').textContent = d2 ? `${d2.toFixed(1)}s` : '–';
+    }
+
+    presetBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        presetBtns.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const p = PRESETS[btn.dataset.preset];
+        inW.value = p.w;
+        inO.value = p.o;
+        inV.value = p.v;
+        inT4.value = p.t4;
+        inD4.value = p.d4;
+        inT2.value = p.t2;
+        simN2 = p.n2;
+        simN4 = p.n4;
+        updateSim();
+      });
+    });
+
+    [inW, inO, inV, inT4, inD4, inT2].forEach((el) => {
+      el.addEventListener('input', () => {
+        presetBtns.forEach((b) => b.classList.remove('active'));
+        updateSim();
+      });
+    });
+
+    updateSim();
+  </script>
+</body>
+</html>
