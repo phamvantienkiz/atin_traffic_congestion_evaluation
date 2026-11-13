@@ -146,6 +146,11 @@ camForm.addEventListener('submit', async (e) => {
     enabled: camEnabledInput.checked,
   };
   try {
+    const submitBtn = camForm.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Đang lưu...';
+    }
     if (id) {
       await api.updateCamera(id, payload);
       cards[id]?.setVideoMode(camVideoMode.value);
@@ -158,6 +163,12 @@ camForm.addEventListener('submit', async (e) => {
     await reloadCameras(true);
   } catch (err) {
     showToast(err.message);
+  } finally {
+    const submitBtn = camForm.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Lưu';
+    }
   }
 });
 

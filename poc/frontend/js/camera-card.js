@@ -8,7 +8,7 @@ export class CameraCard {
     this.cam = cam;
     this.cfg = cfg;
     this.latest = null;
-    this.videoMode = localStorage.getItem(`video_mode_${cam.id}`) || 'mjpeg';
+    this.videoMode = localStorage.getItem(`video_mode_v2_${cam.id}`) || 'mjpeg';
 
     this.el = document.createElement('article');
     this.el.className = 'cam-card';
@@ -68,8 +68,8 @@ export class CameraCard {
   }
 
   setVideoMode(mode) {
-    this.videoMode = mode === 'mjpeg' ? 'mjpeg' : 'webrtc';
-    localStorage.setItem(`video_mode_${this.cam.id}`, this.videoMode);
+    this.videoMode = mode === 'webrtc' ? 'webrtc' : 'mjpeg';
+    localStorage.setItem(`video_mode_v2_${this.cam.id}`, this.videoMode);
     if (this.videoMode === 'mjpeg') {
       this.iframe.classList.add('hidden');
       this.iframe.removeAttribute('src');
