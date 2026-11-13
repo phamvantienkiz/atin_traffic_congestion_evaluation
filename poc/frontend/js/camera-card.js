@@ -8,7 +8,7 @@ export class CameraCard {
     this.cam = cam;
     this.cfg = cfg;
     this.latest = null;
-    this.videoMode = localStorage.getItem(`video_mode_${cam.id}`) || 'webrtc';
+    this.videoMode = localStorage.getItem(`video_mode_${cam.id}`) || 'mjpeg';
 
     this.el = document.createElement('article');
     this.el.className = 'cam-card';

@@ -174,6 +174,14 @@ btnDeleteCam.addEventListener('click', async () => {
   }
 });
 
+camVideoMode.addEventListener('change', () => {
+  const id = camIdInput.value;
+  if (id && cards[id]) {
+    cards[id].setVideoMode(camVideoMode.value);
+    showToast(`Đã chuyển ${id} sang ${camVideoMode.value.toUpperCase()}`);
+  }
+});
+
 btnImportZone.addEventListener('click', async () => {
   const id = camIdInput.value;
   if (!id) return;
