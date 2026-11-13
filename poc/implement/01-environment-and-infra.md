@@ -7,19 +7,19 @@
 
 ```text
 poc/
-├── pyproject.toml            # Dependencies Python (dùng chung cho ai + backend)
-├── .python-version           # 3.11
 ├── .env.example              # Biến môi trường mẫu
 ├── run.sh                    # Khởi động backend (Linux server)
 ├── mediamtx/
 │   ├── mediamtx.yml          # Cấu hình MediaMTX (sinh tự động bởi backend, có bản mẫu)
 │   └── README.md             # Cách tải binary
-├── ai/                       # Xem 02-ai-pipeline.md
-├── backend/                  # Xem 03-backend.md
-├── frontend/                 # Xem 04-frontend.md
+├── backend/                  # Gộp AI + Backend, cô lập bằng backend/.venv (xem 02 & 03)
+│   ├── pyproject.toml        # Dependencies Python (dùng chung cho ai + backend)
+│   ├── .python-version       # 3.11 / 3.12
+│   └── ai/                   # Phân hệ AI (xem 02-ai-pipeline.md)
+├── frontend/                 # HTML/CSS/Vanilla JS thuần, không dependency (xem 04-frontend.md)
 └── implement/                # Tài liệu kế hoạch
 ```
-`.gitignore` bổ sung: `poc/.venv/`, `poc/mediamtx/mediamtx` (binary), `poc/backend/data/snapshots/`, `poc/backend/data/cameras.json`, `*.onnx`, `*.engine`.
+`.gitignore` bổ sung: `poc/mediamtx/mediamtx` (binary), `poc/mediamtx/mediamtx.exe`, `poc/backend/data/snapshots/`, `poc/backend/data/cameras.json`, `*.onnx`, `*.engine`. (Thư mục `.venv/` đã được ignore toàn cục.)
 
 ## 2. Bước 1 — Kết nối Server (mỗi lần làm việc)
 
@@ -52,12 +52,12 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # cài vào ~/.local/bin
 ```bash
 mkdir -p ~/work && cd ~/work
 git clone <repo_url> traffic_congestion_evaluation
-cd traffic_congestion_evaluation/poc
-uv python install 3.11
-uv venv --python 3.11 .venv
+cd traffic_congestion_evaluation/poc/backend
+uv python install 3.12
+uv venv --python 3.12 .venv
 ```
 
-`poc/pyproject.toml` (tạo mới):
+`poc/backend/pyproject.toml`:
 ```toml
 [project]
 name = "traffic-poc"
@@ -156,15 +156,14 @@ paths:
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")"
-export PYTHONPATH="$PWD"
-uv run uvicorn backend.main:app --host 0.0.0.0 --port 8080
+cd "$(dirname "$0")/backend"
+uv run uvicorn main:app --host 0.0.0.0 --port 8080
 ```
 Backend tự khởi động MediaMTX như tiến trình con (xem 03, mục 4) nên chỉ cần chạy `./run.sh`. Để giữ chạy khi tắt Termius: `tmux new -s poc` rồi `./run.sh` (thoát giữ phiên: `Ctrl+B`, `D`).
 
 `poc/.env.example`:
 ```env
-MODEL_PATH=../models/vehicle_n_best.pt
+MODEL_PATH=../../models/vehicle_n_best.pt
 DEVICE=cuda:0
 DEMO_MODE=0
 MEDIAMTX_BIN=mediamtx/mediamtx
@@ -172,4 +171,4 @@ MEDIAMTX_CONFIG=mediamtx/mediamtx.yml
 ```
 
 ## 7. Chạy trên laptop Windows (tùy chọn, để dev frontend không cần GPU)
-- `cd poc; uv venv; uv sync` (torch CPU sẽ tự cài nếu bỏ index CUDA — chấp nhận chậm), đặt `DEVICE=cpu`, tải `mediamtx_windows_amd64.zip`, đặt `MEDIAMTX_BIN=mediamtx/mediamtx.exe`, chạy `uv run uvicorn backend.main:app --port 8080` với `PYTHONPATH=poc`.
+- `cd poc/backend; uv venv; uv sync` (torch CPU sẽ tự cài nếu bỏ index CUDA — chấp nhận chậm), đặt `DEVICE=cpu`, tải `mediamtx_windows_amd64.zip`, đặt `MEDIAMTX_BIN=mediamtx/mediamtx.exe`, chạy `uv run uvicorn main:app --port 8080`.

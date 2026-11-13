@@ -1,12 +1,12 @@
-# 02 — PHÂN HỆ AI (`poc/ai/`) — GIAI ĐOẠN G1 + G2
+# 02 — PHÂN HỆ AI (`poc/backend/ai/`) — GIAI ĐOẠN G1 + G2
 
 > Đọc trước: [00-overview-and-decisions.md](./00-overview-and-decisions.md) mục 2 (D3, D5–D10) và mục 4.2 (`CameraResult`).
-> Mục tiêu: thư viện Python `ai` nhận URL RTSP + zone, xuất `CameraResult` mỗi chu kỳ cho mọi camera.
+> Mục tiêu: package Python `ai` (nằm trong `poc/backend/ai/`) nhận URL RTSP + zone, xuất `CameraResult` mỗi chu kỳ cho mọi camera.
 
 ## 1. Cấu trúc file
 
 ```text
-poc/ai/
+poc/backend/ai/
 ├── __init__.py
 ├── config.py                   # B1: toàn bộ ngưỡng & tham số
 ├── geometry.py                 # B2: zone, ROI crop, chuyển tọa độ
@@ -50,7 +50,7 @@ DEMO_MODE = os.getenv("DEMO_MODE", "0") == "1"
 
 @dataclass(frozen=True)
 class AIConfig:
-    model_path: str = os.getenv("MODEL_PATH", "../models/vehicle_n_best.pt")
+    model_path: str = os.getenv("MODEL_PATH", "../../models/vehicle_n_best.pt")
     device: str = os.getenv("DEVICE", "cuda:0")
     imgsz: int = 640
     conf: float = 0.15            # thấp để ByteTrack dùng detection yếu
@@ -123,7 +123,7 @@ class AIConfig:
 CFG = AIConfig()
 ```
 
-**Xong khi:** `uv run python -c "from ai.config import CFG; print(CFG)"` chạy được (từ thư mục `poc`, `PYTHONPATH=.`).
+**Xong khi:** `uv run python -c "from ai.config import CFG; print(CFG)"` chạy được (từ thư mục `poc/backend`).
 
 ---
 
@@ -151,7 +151,7 @@ def zone_mask(zone_px: np.ndarray | None, w: int, h: int) -> np.ndarray:
     """uint8 mask 0/255. zone None -> toàn 255."""
 ```
 
-**Xong khi:** viết `poc/ai/tests/test_geometry.py` (pytest) kiểm tra: ROI kẹp biên đúng, point trong/ngoài, axis length của hình chữ nhật 100x200 dọc = 200.
+**Xong khi:** viết `poc/backend/ai/tests/test_geometry.py` (pytest) kiểm tra: ROI kẹp biên đúng, point trong/ngoài, axis length của hình chữ nhật 100x200 dọc = 200.
 
 ---
 

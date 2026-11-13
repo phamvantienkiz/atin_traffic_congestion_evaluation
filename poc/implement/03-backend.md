@@ -1,13 +1,15 @@
 # 03 — PHÂN HỆ BACKEND (`poc/backend/`) — GIAI ĐOẠN G3
 
 > Đọc trước: [00](./00-overview-and-decisions.md) mục 2 (D1, D2, D11–D13, D16) và mục 4 (hợp đồng dữ liệu).
-> Backend = FastAPI 1 tiến trình: quản lý cấu hình camera, MediaMTX, chạy `TrafficEngine` (từ `poc/ai`), phát WebSocket, lưu snapshot, phục vụ frontend tĩnh.
+> Backend = FastAPI 1 tiến trình: quản lý cấu hình camera, MediaMTX, chạy `TrafficEngine` (từ `poc/backend/ai`), phát WebSocket, lưu snapshot, phục vụ frontend tĩnh.
 
 ## 1. Cấu trúc file
 
 ```text
 poc/backend/
 ├── __init__.py
+├── pyproject.toml       # Dependencies + môi trường .venv cô lập cho backend (bao gồm ai)
+├── .python-version
 ├── main.py              # FastAPI app, lifespan, routes
 ├── settings.py          # đọc .env
 ├── camera_store.py      # đọc/ghi data/cameras.json (thread-safe)
@@ -15,6 +17,7 @@ poc/backend/
 ├── events.py            # lưu event + snapshot
 ├── ws_hub.py            # quản lý client WebSocket + vòng broadcast 5Hz
 ├── schemas.py           # Pydantic models
+├── ai/                  # Phân hệ AI (xem 02-ai-pipeline.md)
 └── data/
     ├── cameras.json     # tự tạo nếu chưa có: {"cameras": []}
     └── snapshots/

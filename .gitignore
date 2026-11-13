@@ -116,3 +116,15 @@ uvicorn.log
 ehthumbs.db
 Thumbs.db
 desktop.ini
+
+# ==============================================================================
+# PoC Phase 1 (Runtime binaries, configs with credentials, snapshots, samples)
+# ==============================================================================
+poc/mediamtx/mediamtx
+poc/mediamtx/mediamtx.exe
+poc/backend/data/cameras.json
+poc/backend/data/snapshots/
+poc/samples/
+poc/out/
+samples/
+out/

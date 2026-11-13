@@ -9,8 +9,8 @@
 | :-- | :-- | :-- |
 | [00-overview-and-decisions.md](./00-overview-and-decisions.md) | Quyết định kỹ thuật, kiến trúc, hợp đồng dữ liệu chung, lộ trình | Tất cả |
 | [01-environment-and-infra.md](./01-environment-and-infra.md) | Server GPU, `.venv`, MediaMTX, SSH tunnel, cấu trúc repo | DevOps / AI |
-| [02-ai-pipeline.md](./02-ai-pipeline.md) | `poc/ai/`: Reader, Detector, Batcher, ByteTrack, T50/D85, MOG2/Flow, State Machine | AI |
-| [03-backend.md](./03-backend.md) | `poc/backend/`: FastAPI, API camera/zone, WebSocket, Snapshot | Backend |
+| [02-ai-pipeline.md](./02-ai-pipeline.md) | `poc/backend/ai/`: Reader, Detector, Batcher, ByteTrack, T50/D85, MOG2/Flow, State Machine | AI |
+| [03-backend.md](./03-backend.md) | `poc/backend/`: FastAPI, API camera/zone, WebSocket, Snapshot (chứa luôn `ai/`) | Backend |
 | [04-frontend.md](./04-frontend.md) | `poc/frontend/`: HTML/CSS/JS, WebRTC, Canvas overlay, vẽ Zone, Event feed | Frontend |
 | [05-integration-test-and-demo.md](./05-integration-test-and-demo.md) | Kiểm thử, tinh chỉnh ngưỡng, kịch bản demo | Tất cả |
 
@@ -18,7 +18,7 @@
 
 | # | Vấn đề | Quyết định | Lý do |
 | :-: | :-- | :-- | :-- |
-| D1 | Số tiến trình | **1 tiến trình Python duy nhất**: `poc/backend/main.py` (FastAPI) import `poc/ai` như thư viện và chạy AI trong các thread nền. **Không** tách AI thành service HTTP riêng. | Không cần serialize ảnh qua mạng, không cần đồng bộ 2 service. |
+| D1 | Số tiến trình & Cấu trúc | **1 tiến trình Python duy nhất** trong `poc/backend/`: gộp `ai/` vào `poc/backend/ai/` và dùng chung 1 môi trường `poc/backend/.venv`. `main.py` import `ai` trực tiếp và chạy AI trong các thread nền. | Không cần serialize ảnh qua mạng, cô lập hoàn toàn trong `poc/backend/`, không cần `PYTHONPATH` phức tạp. |
 | D2 | Gateway video | **MediaMTX** (binary Linux, không cần Docker). Mỗi camera là 1 path `cam1..cam8` với `source: rtsp://...` và `sourceOnDemand: no`. | 1 kết nối tới camera gốc, phát cả RTSP (cho AI) và WebRTC (cho web). |
 | D3 | Luồng AI `720p @ 15 FPS` | AI đọc `rtsp://127.0.0.1:8554/camX` bằng OpenCV, **resize về 1280x720 và lấy mẫu 15 FPS trong code** (bỏ frame dựa trên timestamp). **Không transcode** bằng FFmpeg. | Không tốn CPU encode lại; đầu vào AI vẫn chuẩn `720p @ 15 FPS` như ATIN. |
 | D4 | Hiển thị video trên web | `<iframe>` trang WebRTC có sẵn của MediaMTX `http://<host>:8889/camX/?controls=false&muted=true&autoplay=true` + `<canvas>` đè lên. Fallback: `<img>` MJPEG `/api/cameras/{id}/mjpeg` từ backend. | Không phải tự viết WHEP client. |
@@ -118,10 +118,10 @@ flowchart LR
 | Giai đoạn | Việc | Đầu ra / Tiêu chí xong | File |
 | :-- | :-- | :-- | :-- |
 | **G0** (0.5 ngày) | Dựng môi trường server, MediaMTX, tunnel | Xem được WebRTC `cam1` trên laptop qua `http://localhost:8889/cam1/` | 01 |
-| **G1** (3 ngày) | AI offline trên file video: Detector + ByteTrack + T50/D85 + MOG2/Flow | Script `poc/ai/tools/run_video.py` xuất video debug có BBox + chỉ số | 02 (B1–B6) |
+| **G1** (3 ngày) | AI offline trên file video: Detector + ByteTrack + T50/D85 + MOG2/Flow | Script `poc/backend/ai/tools/run_video.py` xuất video debug có BBox + chỉ số | 02 (B1–B6) |
 | **G2** (2 ngày) | State machine + occlusion + GpuBatcher đa camera | 8 camera RTSP chạy ≥ 13 FPS/cam, log trạng thái | 02 (B7–B10) |
 | **G3** (2 ngày) | Backend FastAPI + WebSocket + snapshot | `curl`/`wscat` nhận JSON đúng hợp đồng 4.2 | 03 |
 | **G4** (3 ngày) | Frontend: lưới, iframe WebRTC, canvas overlay, vẽ zone, event feed | Demo đầy đủ trên laptop | 04 |
 | **G5** (2–3 ngày) | Tinh chỉnh ngưỡng trên camera thật, kịch bản demo | Checklist nghiệm thu file 05 đạt | 05 |
 
-> Quy tắc chung: Python luôn chạy qua `uv`/`.venv` của `poc/` (xem file 01). Không cài global. Không commit `print()` debug; dùng `logging`.
+> Quy tắc chung: Python luôn chạy qua `uv`/`.venv` của `poc/backend/` (xem file 01). Không cài global. Không commit `print()` debug; dùng `logging`.

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ATIN Traffic Congestion — PoC</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="brand">ATIN Traffic Congestion — PoC</h1>
+      <span id="demo-chip" class="chip chip-demo hidden">DEMO MODE</span>
+    </div>
+    <div class="topbar-right">
+      <div class="layout-switch" role="group" aria-label="Bố cục lưới">
+        <button type="button" class="btn-seg" data-layout="4">4</button>
+        <button type="button" class="btn-seg" data-layout="6">6</button>
+        <button type="button" class="btn-seg" data-layout="8">8</button>
+      </div>
+      <span id="ws-status" class="ws-pill offline" title="Trạng thái WebSocket">
+        <span class="ws-dot"></span> WS
+      </span>
+      <button type="button" id="btn-sound" class="btn btn-icon" title="Bật/tắt âm thanh cảnh báo">🔕</button>
+      <button type="button" id="btn-add-cam" class="btn btn-primary">+ Thêm camera</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="grid-section">
+      <div id="camera-grid" class="camera-grid" data-layout="4"></div>
+    </section>
+
+    <aside class="events-sidebar">
+      <div class="sidebar-header">
+        <h2>Sự kiện xác nhận</h2>
+        <span id="event-count" class="count-pill">0</span>
+      </div>
+      <div id="events-list" class="events-list">
+        <div class="empty-hint">Chưa có sự kiện ùn tắc / kẹt xe.</div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Modal thêm / sửa camera & import zone -->
+  <div id="cam-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="cam-modal-title">Thêm camera</h3>
+        <button type="button" class="btn-close" data-close="cam-modal">✕</button>
+      </div>
+      <form id="cam-form" class="modal-body">
+        <input type="hidden" id="cam-id" />
+        <label class="field">
+          <span>Tên camera</span>
+          <input type="text" id="cam-name" placeholder="VD: Nguyễn Văn Linh - Q7" required />
+        </label>
+        <label class="field">
+          <span>RTSP URL</span>
+          <input type="text" id="cam-rtsp" placeholder="rtsp://user:pass@10.0.0.11:554/stream1" required />
+        </label>
+        <div class="field-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="cam-light" />
+            <span>Có đèn tín hiệu (ngưỡng 90s)</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="cam-enabled" checked />
+            <span>Bật xử lý AI</span>
+          </label>
+        </div>
+        <div id="cam-extra-tools" class="extra-tools hidden">
+          <label class="field">
+            <span>Chế độ video</span>
+            <select id="cam-video-mode">
+              <option value="webrtc">WebRTC (mặc định, H.264)</option>
+              <option value="mjpeg">MJPEG Fallback (H.265 / tunnel)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Import Zone JSON (chuẩn hóa [{x,y}] hoặc Roboflow pixel)</span>
+            <textarea id="cam-zone-json" rows="3" placeholder='[{"x":0.1,"y":0.35},...]'></textarea>
+          </label>
+          <button type="button" id="btn-import-zone" class="btn btn-subtle">📥 Import Zone</button>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btn-delete-cam" class="btn btn-danger hidden">Xóa camera</button>
+          <div class="spacer"></div>
+          <button type="button" class="btn btn-subtle" data-close="cam-modal">Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal xem ảnh snapshot lớn -->
+  <div id="snap-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card modal-wide">
+      <div class="modal-header">
+        <h3 id="snap-modal-title">Ảnh sự kiện</h3>
+        <button type="button" class="btn-close" data-close="snap-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <img id="snap-modal-img" class="snap-full" alt="Snapshot" />
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

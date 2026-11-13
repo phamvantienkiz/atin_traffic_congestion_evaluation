@@ -1,0 +1,31 @@
+[project]
+name = "traffic-poc-backend"
+version = "0.1.0"
+description = "Traffic Congestion Evaluation PoC Phase 1 (AI + FastAPI Backend)"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "ultralytics>=8.3.0",
+  "supervision>=0.25.0",
+  "opencv-python-headless>=4.9",
+  "numpy>=1.26,<2.0",
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.29",
+  "pydantic>=2.6",
+  "python-dotenv>=1.0",
+  "pyyaml>=6.0",
+  "torch>=2.2",
+  "torchvision>=0.17",
+]
+
+[project.optional-dependencies]
+onnx = ["onnx>=1.15", "onnxruntime-gpu>=1.17", "onnxslim"]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+  "httpx>=0.27",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
