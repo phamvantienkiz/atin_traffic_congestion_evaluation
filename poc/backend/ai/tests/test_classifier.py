@@ -92,3 +92,29 @@ def test_high_density_high_dwell_but_fast_flow_not_gridlocked() -> None:
         v_flow=4.0,
     )
     assert classify(m, CFG) == "CONGESTED"
+
+
+def test_env_overrides_thresholds_and_weights(monkeypatch) -> None:
+    monkeypatch.setenv("W_CLEAR", "10.0")
+    monkeypatch.setenv("CONGESTED_T50_4W_S", "4.5")
+    monkeypatch.setenv("WEIGHT_CAR", "2.5")
+    monkeypatch.setenv("O_CLEAR", "   ")  # empty string falls back to default
+
+    cfg = AIConfig()
+    assert cfg.w_clear == 10.0
+    assert cfg.congested_t50_4w_s == 4.5
+    assert cfg.class_weights["car"] == 2.5
+    assert cfg.o_clear == 0.35
+
+    m = _metrics(w_total=16.0, n_4w=4, t50_4w=4.0, o_vis=0.40, v_flow=7.0)
+    assert classify(m, cfg) == "CLEAR"
+    m_slow = _metrics(w_total=16.0, n_4w=4, t50_4w=4.6, o_vis=0.40, v_flow=7.0)
+    assert classify(m_slow, cfg) == "CONGESTED"
+
+
+def test_env_invalid_number_raises_clear_error(monkeypatch) -> None:
+    import pytest
+
+    monkeypatch.setenv("W_CLEAR", "not_a_number")
+    with pytest.raises(ValueError, match="W_CLEAR"):
+        AIConfig()

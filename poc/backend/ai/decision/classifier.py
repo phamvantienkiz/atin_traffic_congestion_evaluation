@@ -26,15 +26,15 @@ def classify(m: dict[str, float | int | None], cfg: AIConfig) -> str:
 
     # 2. GRIDLOCKED
     dense_g = w >= cfg.w_gridlock or o >= cfg.o_gridlock
-    stall_4w = gt(t4, 7.0) or gt(d4, 10.0)
-    stall_2w = gt(t2, 5.0) or gt(d2, 8.0)
+    stall_4w = gt(t4, cfg.gridlock_t50_4w_s) or gt(d4, cfg.gridlock_d85_4w_s)
+    stall_2w = gt(t2, cfg.gridlock_t50_2w_s) or gt(d2, cfg.gridlock_d85_2w_s)
 
     if n_4w < 2:
-        time_ok = gt(t2, 5.5) or gt(d2, 8.5)
+        time_ok = gt(t2, cfg.gridlock_t50_2w_only_s) or gt(d2, cfg.gridlock_d85_2w_only_s)
     else:
         time_ok = stall_4w and (stall_2w or n_2w == 0)
 
-    macro_ok = v <= cfg.v_stall or o >= 0.70
+    macro_ok = v <= cfg.v_stall or o >= cfg.o_macro_stall
     if dense_g and time_ok and macro_ok:
         return "GRIDLOCKED"
 
@@ -45,10 +45,10 @@ def classify(m: dict[str, float | int | None], cfg: AIConfig) -> str:
     # 3. CONGESTED
     dense_c = w >= cfg.w_congested or o >= cfg.o_congested
     slow = (
-        gt(t4, 3.0)
-        or gt(d4, 5.0)
-        or gt(t2, 3.0)
-        or gt(d2, 4.5)
+        gt(t4, cfg.congested_t50_4w_s)
+        or gt(d4, cfg.congested_d85_4w_s)
+        or gt(t2, cfg.congested_t50_2w_s)
+        or gt(d2, cfg.congested_d85_2w_s)
         or (cfg.v_stall < v < cfg.v_clear and o >= cfg.o_congested)
     )
     if dense_c and slow:
