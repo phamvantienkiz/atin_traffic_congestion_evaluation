@@ -98,6 +98,7 @@ function openCamModal(card) {
 }
 
 async function reloadCameras(delayIframeReload = false) {
+  Object.values(cards).forEach((c) => c.destroy());
   const cams = await api.cameras();
   cams.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
   gridEl.innerHTML = '';

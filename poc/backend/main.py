@@ -9,7 +9,7 @@ from pathlib import Path
 
 import cv2
 import torch
-from fastapi import FastAPI, HTTPException, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -182,19 +182,22 @@ def create_app(
         return Response(content=buf.tobytes(), media_type="image/jpeg")
 
     @app.get("/api/cameras/{cam_id}/mjpeg")
-    async def camera_mjpeg(cam_id: str) -> StreamingResponse:
+    async def camera_mjpeg(cam_id: str, request: Request) -> StreamingResponse:
         if store.get(cam_id) is None:
             raise HTTPException(status_code=404, detail=f"Camera '{cam_id}' không tồn tại")
 
         async def _gen():
-            while True:
+            while not await request.is_disconnected():
                 frame = engine.latest_frame(cam_id)
                 if frame is not None:
                     ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
                     if ok:
+                        data = buf.tobytes()
                         yield (
-                            b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"
-                            + buf.tobytes()
+                            b"--frame\r\n"
+                            b"Content-Type: image/jpeg\r\n"
+                            + f"Content-Length: {len(data)}\r\n\r\n".encode()
+                            + data
                             + b"\r\n"
                         )
                 await asyncio.sleep(0.1)
@@ -202,6 +205,7 @@ def create_app(
         return StreamingResponse(
             _gen(),
             media_type="multipart/x-mixed-replace; boundary=frame",
+            headers={"Cache-Control": "no-store"},
         )
 
     @app.get("/api/events")

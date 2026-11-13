@@ -88,6 +88,12 @@ export class CameraCard {
     this.iframe.src = `http://${location.hostname}:${this.cfg.webrtc_port}/${this.cam.id}/?controls=false&muted=true&autoplay=true&playsinline=true`;
   }
 
+  destroy() {
+    this.zoneEditor.stop();
+    this.iframe.removeAttribute('src');
+    this.mjpegImg.removeAttribute('src');
+  }
+
   flashAlert() {
     this.el.classList.remove('flash-alert');
     void this.el.offsetWidth;
