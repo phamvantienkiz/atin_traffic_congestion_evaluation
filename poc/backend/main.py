@@ -181,6 +181,15 @@ def create_app(
             raise HTTPException(status_code=500, detail="Không thể mã hóa ảnh JPEG")
         return Response(content=buf.tobytes(), media_type="image/jpeg")
 
+    def _encode_mjpeg_preview(frame) -> bytes | None:
+        h, w = frame.shape[:2]
+        if w > 640:
+            preview = cv2.resize(frame, (640, int(round(h * (640.0 / w)))), interpolation=cv2.INTER_AREA)
+        else:
+            preview = frame
+        ok, buf = cv2.imencode(".jpg", preview, [cv2.IMWRITE_JPEG_QUALITY, 55])
+        return buf.tobytes() if ok else None
+
     @app.get("/api/cameras/{cam_id}/mjpeg")
     async def camera_mjpeg(cam_id: str, request: Request) -> StreamingResponse:
         if store.get(cam_id) is None:
@@ -190,9 +199,8 @@ def create_app(
             while not await request.is_disconnected():
                 frame = engine.latest_frame(cam_id)
                 if frame is not None:
-                    ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
-                    if ok:
-                        data = buf.tobytes()
+                    data = await asyncio.to_thread(_encode_mjpeg_preview, frame)
+                    if data is not None:
                         yield (
                             b"--frame\r\n"
                             b"Content-Type: image/jpeg\r\n"
@@ -200,7 +208,7 @@ def create_app(
                             + data
                             + b"\r\n"
                         )
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.125)
 
         return StreamingResponse(
             _gen(),
