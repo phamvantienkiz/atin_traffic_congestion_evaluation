@@ -1,5 +1,13 @@
 import { STATE_META } from './overlay.js';
 
+const STAGE_LABELS = {
+  CONFIRMED_3M: 'Xác nhận 3p',
+  FOLLOWUP_5M: 'Nhắc 5p',
+  PERIODIC_15M: 'Định kỳ +15p',
+  TRANSITION: 'Chuyển mức',
+  RECOVERED_CLEAR: 'Đã thông thoáng',
+};
+
 function playBeep() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -51,19 +59,25 @@ export class EventsPanel {
       const meta = STATE_META[ev.state] || STATE_META.UNKNOWN;
       const tStr = new Date(ev.ts * 1000).toLocaleTimeString('vi-VN', { hour12: false });
       const m = ev.metrics || {};
-      const t50 = m.t50_4w != null ? `${m.t50_4w.toFixed(1)}s` : '–';
-      const d85 = m.d85_4w != null ? `${m.d85_4w.toFixed(1)}s` : '–';
+      const d85 = m.d85_4w != null ? `${Number(m.d85_4w).toFixed(1)}s` : '–';
       const ovis = m.o_vis != null ? `${Math.round(m.o_vis * 100)}%` : '–';
+      const flow = m.v_flow != null ? Number(m.v_flow).toFixed(1) : '–';
+      const stageLabel = STAGE_LABELS[ev.event_stage] || ev.event_stage || '';
+      const conf = ev.confidence ?? m.state_conf;
+      const confStr = conf != null ? ` · Tin cậy ${Math.round(Number(conf) * 100)}%` : '';
 
       const row = document.createElement('div');
       row.className = `event-item${ev.id === highlightId ? ' is-new' : ''}`;
       row.innerHTML = `
         <img class="event-thumb" src="${ev.snapshot_url}" alt="${ev.state}" loading="lazy" />
         <div class="event-meta">
-          <span class="event-badge" style="background:${meta.color}">${meta.label}</span>
+          <div class="event-badges">
+            <span class="event-badge" style="background:${meta.color}">${meta.label}</span>
+            ${stageLabel ? `<span class="event-stage">${stageLabel}</span>` : ''}
+          </div>
           <div class="event-title">${ev.camera_name || ev.camera_id}</div>
-          <div class="event-sub">${tStr} · kéo dài ${ev.duration_s}s</div>
-          <div class="event-sub">T50 4B: ${t50} · D85 4B: ${d85} · Phủ: ${ovis}</div>
+          <div class="event-sub">${tStr} · kéo dài ${ev.duration_s}s${confStr}</div>
+          <div class="event-sub">Độ phủ: ${ovis} · Dòng xe: ${flow} · Dừng (ô tô): ${d85}</div>
         </div>
       `;
       row.addEventListener('click', () => {

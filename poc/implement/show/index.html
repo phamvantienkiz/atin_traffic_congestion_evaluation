@@ -208,7 +208,7 @@
               <div class="card-label"><span>Bước 1 · Detector (YOLO cắt đúng vùng xem)</span><span class="state-pill st-blue">Nhận diện xe</span></div>
               <div class="title-md">Chỉ nhìn vùng đường cần đo, không nhìn lan man</div>
               <p class="body-txt">
-                Thay vì đưa cả khung hình rộng vào AI, hệ thống <strong>cắt riêng khung chữ nhật quanh Poly Zone (+10% lề)</strong>.
+                Thay vì đưa cả khung hình rộng vào AI, hệ thống <strong>cắt riêng khung chữ nhật quanh vùng đo mở rộng (<code class="mono">flow_zone_px</code> +10% lề)</strong>.
                 Cách này giúp xe ở xa trông to rõ hơn và loại bỏ xe đỗ trên vỉa hè hoặc làn đối diện.
                 Ngưỡng phát hiện đặt thấp (<code class="mono">conf=0.15</code>) để không bỏ sót xe máy đi chen sát nhau.
               </p>
@@ -275,7 +275,7 @@
               <div class="title-md">Mặt đường đang bị xe che kín bao nhiêu phần trăm?</div>
               <p class="body-txt">
                 Thuật toán <strong>MOG2</strong> học nền đường trống theo thời gian và tự loại bỏ bóng nắng/bóng xe.
-                Sau đó lấy phần hợp giữa mảng xe của MOG2 và các khung xe YOLO để tính tỷ lệ diện tích Poly Zone bị che phủ (<strong>Phủ / O_vis</strong> từ 0% đến 100%).
+                Sau đó lấy phần hợp giữa mảng xe của MOG2 và các khung xe YOLO trên vùng <strong><code class="mono">flow_zone_px</code></strong> (kéo giãn +20% dọc trục đường ở cả 2 đầu trên/dưới, giữ nguyên bề ngang) để tính độ phủ <strong>Phủ / O_vis</strong> (0–100%).
               </p>
             </div>
 
@@ -346,7 +346,7 @@
                 <strong>Điểm mù nếu chỉ dùng Tracker (PA1):</strong> Xe máy len lỏi, xe lớn che nhau làm ByteTrack liên tục mất và tạo ID mới, khiến <code class="mono">T50/D85</code> bị trống.
               </p>
               <p class="body-txt">
-                <strong>Cách 2 PA phối hợp:</strong> Nhánh <em>Macro Rescue</em> dùng PA2 thấy mặt đường kín đặc (<code class="mono">Phủ ≥ 75%</code>) và đứng im (<code class="mono">Flow ≤ 1</code>) → Vẫn chốt đúng <strong>KẸT CỨNG</strong>.
+                <strong>Cách 2 PA phối hợp:</strong> Nhánh <em>Macro Rescue</em> dùng PA2 thấy mặt đường kín đặc (<code class="mono">Phủ ≥ 80%</code>) và đứng im (<code class="mono">Flow ≤ 1</code>) → Vẫn chốt đúng <strong>KẸT CỨNG</strong>.
               </p>
             </div>
           </div>
@@ -390,25 +390,25 @@
                 <tbody>
                   <tr>
                     <td><span class="state-pill st-clear">CLEAR</span></td>
-                    <td><code class="mono">W &lt; 12.0</code> và <code class="mono">O_vis &lt; 35%</code></td>
+                    <td><code class="mono">W &lt; 18.0</code> và <code class="mono">O_vis &lt; 40%</code></td>
                     <td>Hoặc chưa đạt ngưỡng chậm</td>
                     <td>Thoát nhanh (<code class="mono">≥ 6.0</code>)</td>
                   </tr>
                   <tr>
                     <td><span class="state-pill st-congested">CONGESTED</span></td>
-                    <td><code class="mono">W ≥ 15.0</code> hoặc <code class="mono">O_vis ≥ 45%</code></td>
-                    <td><code class="mono">T50 &gt; 3.0s</code> hoặc <code class="mono">D85_4B &gt; 5.0s</code> / <code class="mono">2B &gt; 4.5s</code></td>
-                    <td>Hoặc <code class="mono">1.0 &lt; V &lt; 6.0</code> khi <code class="mono">O_vis ≥ 45%</code></td>
+                    <td><code class="mono">W ≥ 25.0</code> hoặc <code class="mono">O_vis ≥ 55%</code></td>
+                    <td>4B: <code class="mono">T50 &gt; 5.0s</code> / <code class="mono">D85 &gt; 7.5s</code><br/>2B: <code class="mono">T50 &gt; 4.5s</code> / <code class="mono">D85 &gt; 7.0s</code></td>
+                    <td>Hoặc <code class="mono">1.0 &lt; V &lt; 6.0</code> khi <code class="mono">O_vis ≥ 55%</code></td>
                   </tr>
                   <tr>
                     <td><span class="state-pill st-gridlocked">GRIDLOCKED</span></td>
-                    <td><code class="mono">W ≥ 24.0</code> hoặc <code class="mono">O_vis ≥ 65%</code></td>
-                    <td>4B: <code class="mono">T50 &gt; 7s</code> / <code class="mono">D85 &gt; 10s</code><br/>2B: <code class="mono">T50 &gt; 5s</code> / <code class="mono">D85 &gt; 8s</code></td>
-                    <td><code class="mono">V_flow ≤ 1.0</code> hoặc <code class="mono">O_vis ≥ 70%</code></td>
+                    <td><code class="mono">W ≥ 38.0</code> hoặc <code class="mono">O_vis ≥ 72%</code></td>
+                    <td>4B: <code class="mono">T50 &gt; 9.0s</code> / <code class="mono">D85 &gt; 14.0s</code><br/>2B: <code class="mono">T50 &gt; 7.5s</code> / <code class="mono">D85 &gt; 12.0s</code></td>
+                    <td><code class="mono">V_flow ≤ 1.0</code> hoặc <code class="mono">O_vis ≥ 75%</code></td>
                   </tr>
                   <tr>
                     <td><span class="state-pill st-purple">Macro Rescue</span></td>
-                    <td><code class="mono">O_vis ≥ 75%</code> và <code class="mono">W ≥ 18.0</code></td>
+                    <td><code class="mono">O_vis ≥ 80%</code> và <code class="mono">W ≥ 28.0</code></td>
                     <td>Không cần <code class="mono">T50/D85</code> (bù đứt track)</td>
                     <td><code class="mono">V_flow ≤ 1.0 px/s</code></td>
                   </tr>
@@ -425,17 +425,17 @@
                 <div>D85 4B: <strong>–</strong> · 2B: <strong>–</strong></div>
               </div>
               <ul class="clean-list" style="gap: 5px; margin-top: 2px;">
-                <li><strong>W / 2B / 4B</strong> (PA1): mật độ quy đổi (<code class="mono">2B×1, car×3, bus/truck×6</code>) và số xe 2B / 4B trong Poly Zone.</li>
-                <li><strong>Phủ / Flow</strong> (PA2): tỷ lệ diện tích chiếm chỗ (<code class="mono">O_vis</code>) và tốc độ dòng chảy (<code class="mono">px/s</code>).</li>
+                <li><strong>W / 2B / 4B</strong> (PA1): mật độ quy đổi (<code class="mono">2B×1, car×3, bus/truck×6</code>) và số xe 2B / 4B trong Poly Zone gốc.</li>
+                <li><strong>Phủ / Flow</strong> (PA2): tỷ lệ diện tích chiếm chỗ (<code class="mono">O_vis</code>) và tốc độ dòng chảy (<code class="mono">px/s</code>) trên vùng <code class="mono">flow_zone_px</code> (+20% dọc trục).</li>
                 <li><strong>T50 4B / 2B</strong> (PA1): trung vị thời gian xe đi <em>xuyên qua</em> zone (cửa sổ 15s, cần <code class="mono">≥ 3</code> xe hoàn thành).</li>
-                <li><strong>D85 4B / 2B</strong> (PA1): thời gian xe <em>đang kẹt</em> trong zone. Hiện <code class="mono">–</code> khi đường thoáng vì cần <code class="mono">≥ 2</code> xe nằm trong zone <code class="mono">≥ 1.5s</code>.</li>
+                <li><strong>D85 4B / 2B</strong> (PA1): thời gian xe <em>đang kẹt</em> trong zone. Hiện <code class="mono">–</code> khi đường thoáng vì cần <code class="mono">≥ 2</code> xe nằm trong zone <code class="mono">≥ 2.0s</code>.</li>
               </ul>
             </div>
           </div>
         </div>
 
         <div class="slide-foot">
-          <span>Khi có &lt; 2 xe 4B trong zone, nhánh GRIDLOCKED tự chuyển sang điều kiện thuần 2B (T50 &gt; 5.5s hoặc D85 &gt; 8.5s)</span>
+          <span>Khi có &lt; 2 xe 4B trong zone, nhánh GRIDLOCKED tự chuyển sang điều kiện thuần 2B (T50 &gt; 8.5s hoặc D85 &gt; 13.0s)</span>
           <span>06 / 09</span>
         </div>
       </section>
@@ -463,32 +463,32 @@
             <div class="card-soft" style="justify-content: space-between;">
               <div class="slider-grid">
                 <label class="slider-item">
-                  <div class="slider-top"><span>Mật độ W_total</span><strong id="val-w">14.0</strong></div>
-                  <input type="range" id="in-w" min="0" max="36" step="0.5" value="14" />
+                  <div class="slider-top"><span>Mật độ W_total</span><strong id="val-w">20.0</strong></div>
+                  <input type="range" id="in-w" min="0" max="50" step="0.5" value="20" />
                 </label>
                 <label class="slider-item">
-                  <div class="slider-top"><span>Độ phủ O_vis (%)</span><strong id="val-o">42%</strong></div>
-                  <input type="range" id="in-o" min="0" max="100" step="1" value="42" />
+                  <div class="slider-top"><span>Độ phủ O_vis (%)</span><strong id="val-o">45%</strong></div>
+                  <input type="range" id="in-o" min="0" max="100" step="1" value="45" />
                 </label>
                 <label class="slider-item">
                   <div class="slider-top"><span>Dòng chảy V_flow (px/s)</span><strong id="val-v">8.5</strong></div>
                   <input type="range" id="in-v" min="0" max="15" step="0.2" value="8.5" />
                 </label>
                 <label class="slider-item">
-                  <div class="slider-top"><span>T50 4B (giây)</span><strong id="val-t4">1.8s</strong></div>
-                  <input type="range" id="in-t4" min="0" max="15" step="0.5" value="1.8" />
+                  <div class="slider-top"><span>T50 4B (giây)</span><strong id="val-t4">2.2s</strong></div>
+                  <input type="range" id="in-t4" min="0" max="15" step="0.5" value="2.2" />
                 </label>
                 <label class="slider-item">
                   <div class="slider-top"><span>D85 4B (giây, 0 = –)</span><strong id="val-d4">–</strong></div>
                   <input type="range" id="in-d4" min="0" max="20" step="0.5" value="0" />
                 </label>
                 <label class="slider-item">
-                  <div class="slider-top"><span>T50 / D85 2B (giây)</span><strong id="val-t2">1.5s</strong></div>
-                  <input type="range" id="in-t2" min="0" max="15" step="0.5" value="1.5" />
+                  <div class="slider-top"><span>T50 / D85 2B (giây)</span><strong id="val-t2">1.8s</strong></div>
+                  <input type="range" id="in-t2" min="0" max="15" step="0.5" value="1.8" />
                 </label>
               </div>
               <div id="sim-reason" class="rule-trace">
-                Nhánh kích hoạt: <strong>CLEAR</strong> — Xe đông vừa phải nhưng tốc độ thoát nhanh (V_flow ≥ 6.0, T50 ≤ 3.0s).
+                Nhánh kích hoạt: <strong>CLEAR</strong> — Xe đông vừa phải nhưng tốc độ thoát nhanh (V_flow ≥ 6.0, T50 ≤ 5.0s).
               </div>
             </div>
 
@@ -545,8 +545,8 @@
 
               <rect x="216" y="38" width="190" height="88" rx="14" fill="#FFF3E6" stroke="#FFD6A8" stroke-width="1.5"></rect>
               <text x="311" y="66" text-anchor="middle" font-size="13" font-weight="600" fill="#A85200">OcclusionShield</text>
-              <text x="311" y="86" text-anchor="middle" font-size="11.5" fill="#6B6B76">Heavy &gt;35% hoặc tụt &gt;60%</text>
-              <text x="311" y="104" text-anchor="middle" font-size="11" fill="#A85200">HOLD tối đa 30s → UNKNOWN</text>
+              <text x="311" y="86" text-anchor="middle" font-size="11.5" fill="#6B6B76">Heavy &gt;45% hoặc tụt &gt;65%</text>
+              <text x="311" y="104" text-anchor="middle" font-size="11" fill="#A85200">HOLD tối đa 40s → UNKNOWN</text>
 
               <rect x="446" y="30" width="270" height="104" rx="14" fill="#EEF3FF" stroke="#D9E8FF" stroke-width="1.5"></rect>
               <text x="581" y="58" text-anchor="middle" font-size="13" font-weight="600" fill="#1545BD">Tầng 1: Provisional (Live UI)</text>
@@ -570,12 +570,12 @@
           <div class="grid-3">
             <div class="card-soft">
               <div class="card-label"><span>Kịch bản che khuất A</span></div>
-              <div class="title-md">Xe lớn chiếm &gt; 35% Zone</div>
-              <p class="body-txt">Khi diện tích BBox của <code class="mono">bus</code>/<code class="mono">truck</code> phủ quá 35% Poly Zone, hệ thống đóng băng trạng thái (<code class="mono">HOLD</code>) thay vì báo thoáng giả.</p>
+              <div class="title-md">Xe lớn chiếm &gt; 45% Zone</div>
+              <p class="body-txt">Khi diện tích BBox của <code class="mono">bus</code>/<code class="mono">truck</code> phủ quá 45% Poly Zone, hệ thống đóng băng trạng thái (<code class="mono">HOLD</code>) thay vì báo thoáng giả.</p>
             </div>
             <div class="card-soft">
               <div class="card-label"><span>Kịch bản che khuất B</span></div>
-              <div class="title-md">Tụt BBox &gt; 60% nhưng Phủ &gt; 70%</div>
+              <div class="title-md">Tụt BBox &gt; 65% nhưng Phủ &gt; 72%</div>
               <p class="body-txt">Nếu số xe nhận diện tụt mạnh trong 2s gần nhất nhưng độ phủ thị giác <code class="mono">O_vis</code> vẫn cao, giữ nguyên trạng thái chờ qua che khuất.</p>
             </div>
             <div class="card-soft">

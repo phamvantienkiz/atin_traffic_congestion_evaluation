@@ -78,47 +78,59 @@ class AIConfig:
     track_activation_conf: float = 0.45
     match_thresh: float = 0.8
 
-    # Zone time
-    window_s: float = 15.0
-    min_dwell_s: float = 1.5          # bỏ xe mới vào < 1.5s khỏi D85
+    # Zone time (cho Poly Zone 18-22m = 3 vạch + 2-3 khoảng trống)
+    window_s: float = 30.0            # cửa sổ 30s để giữ đủ mẫu xe đi chậm 15-20s
+    min_dwell_s: float = 2.0          # bỏ xe mới vào < 2.0s khỏi D85
     min_travel_ratio: float = 0.45    # dịch chuyển >= 45% chiều dọc zone mới tính Completed
-    min_completed_samples: int = 3
+    min_completed_samples: int = 2
     min_active_samples: int = 2
     lost_timeout_s: float = 1.0       # track không thấy > 1s coi là đã rời
 
-    # Aux
+    # Aux (trên flow_zone_px mở rộng +20% hai đầu dọc trục đường)
     aux_w: int = 320
     aux_h: int = 180
+    flow_zone_extend_ratio: float = 0.20
     mog2_lr_normal: float = 0.005
     flow_noise_px: float = 0.8        # px/frame trên ảnh 320x180
-    v_stall: float = 1.0              # px/s
-    v_clear: float = 6.0              # px/s (tinh chỉnh ở G5)
+    v_stall: float = 6.0              # px/s (ngưỡng kẹt Macro-only khi thiếu T50/D85)
+    v_gridlock_max: float = 15.0      # px/s (ngưỡng Flow tối đa cho GRIDLOCKED khi có T50/D85)
+    v_congested_macro: float = 18.0   # px/s (ngưỡng ùn tắc Macro-only khi thiếu T50/D85)
+    v_congested_max: float = 25.0     # px/s (ngưỡng Flow tối đa cho CONGESTED khi có T50/D85)
+    v_clear_min: float = 10.0         # px/s (ngưỡng Flow lưu thông bình thường)
 
-    # Luật trạng thái (xem core-solution mục 5.2)
-    w_clear: float = 12.0
-    w_congested: float = 15.0
-    w_gridlock: float = 24.0
-    w_rescue: float = 18.0
-    o_clear: float = 0.35
-    o_congested: float = 0.45
-    o_gridlock: float = 0.65
-    o_rescue: float = 0.75
+    # Luật trạng thái V2 (Bỏ ngưỡng cứng W_*, dùng O_vis + Flow + T50/D85; W làm Sanity Gate & Confidence)
+    w_sanity_min: float = 3.0         # >= 1 ô tô hoặc >= 3 xe máy để chống nhiễu đèn pha đêm mưa
+    o_clear: float = 0.40             # < 40%: đường vắng/thoáng; 40%..70%: đông lưu thông TB
+    o_congested: float = 0.70         # >= 70% (70%..85%): độ phủ đường ùn tắc
+    o_gridlock: float = 0.85          # >= 85%: độ phủ đường kẹt cứng
+
+    # Ngưỡng thời gian T50 / D85 (giây) ranh giới CLEAR -> CONGESTED
+    congested_t50_4w_s: float = 5.5
+    congested_d85_4w_s: float = 6.5
+    congested_t50_2w_s: float = 4.5
+    congested_d85_2w_s: float = 5.0
+
+    # Ngưỡng thời gian T50 / D85 (giây) ranh giới CONGESTED -> GRIDLOCKED
+    gridlock_t50_4w_s: float = 16.0
+    gridlock_d85_4w_s: float = 20.0
+    gridlock_t50_2w_s: float = 13.5
+    gridlock_d85_2w_s: float = 17.0
 
     # Occlusion
-    heavy_area_ratio: float = 0.35
-    bbox_drop_ratio: float = 0.60
-    occ_o_vis: float = 0.70
-    occ_hold_max_s: float = 30.0
+    heavy_area_ratio: float = 0.45
+    bbox_drop_ratio: float = 0.65
+    occ_o_vis: float = 0.72
+    occ_hold_max_s: float = 40.0
 
-    # State machine
+    # State machine & Chu kỳ bắn sự kiện (3p -> +2p (5p) -> mỗi +15p & Chuyển trạng thái)
     smooth_window_s: float = 5.0
     stream_timeout_s: float = 5.0
-    confirm_congested_s: float = 15.0 if DEMO_MODE else 60.0
-    confirm_congested_light_s: float = 20.0 if DEMO_MODE else 90.0
-    confirm_gridlock_s: float = 30.0 if DEMO_MODE else 120.0
+    red_light_hold_s: float = 15.0 if DEMO_MODE else 90.0
+    confirm_state_s: float = 30.0 if DEMO_MODE else 180.0
+    followup_after_confirm_s: float = 20.0 if DEMO_MODE else 120.0
+    periodic_reminder_s: float = 90.0 if DEMO_MODE else 900.0
     persistence_tolerance_s: float = 5.0
     exit_clear_s: float = 15.0
-    cooldown_s: float = 60.0
 
 CFG = AIConfig()
 ```
@@ -149,6 +161,9 @@ def point_in_zone(zone_px: np.ndarray, pt: tuple[float,float]) -> bool:
 
 def zone_mask(zone_px: np.ndarray | None, w: int, h: int) -> np.ndarray:
     """uint8 mask 0/255. zone None -> toàn 255."""
+
+def extend_zone_longitudinal(zone_px: np.ndarray | None, w: int, h: int, ratio: float = 0.20) -> np.ndarray | None:
+    """Kéo giãn đa giác dọc theo trục đường thêm ratio (+20%) ở cả đầu trên và đầu dưới, giữ nguyên bề ngang."""
 ```
 
 **Xong khi:** viết `poc/backend/ai/tests/test_geometry.py` (pytest) kiểm tra: ROI kẹp biên đúng, point trong/ngoài, axis length của hình chữ nhật 100x200 dọc = 200.
@@ -341,59 +356,89 @@ class OcclusionShield:
         # Trả: "NONE" | "HOLD" | "UNKNOWN_HOLD"
 ```
 
-**classifier.py** — hàm thuần, dễ test:
+**classifier.py** — hàm thuần kết hợp `O_vis + Flow + T50/D85` và trả về `(raw_state, state_conf)`:
 ```python
-def classify(m: dict, cfg) -> str:
-    w, o, v = m["w_total"], m["o_vis"], m["v_flow"]
+def classify(m: dict, cfg) -> tuple[str, float]:
+    w = float(m["w_total"] or 0.0)
+    o = float(m["o_vis"] or 0.0)
+    v = float(m["v_flow"] or 0.0)
     t2, t4, d2, d4 = m["t50_2w"], m["t50_4w"], m["d85_2w"], m["d85_4w"]
-    gt = lambda x, th: x is not None and x > th      # None coi như không thỏa
-    lt = lambda x, th: x is None or x < th            # None coi như không cản CLEAR
+    gt = lambda x, th: x is not None and float(x) > th
+    le = lambda x, th: x is not None and float(x) <= th
 
-    # 1. Đường vắng
-    if w < cfg.w_clear and o < cfg.o_clear: return "CLEAR"
-    # 2. GRIDLOCK
-    dense_g = w >= cfg.w_gridlock or o >= cfg.o_gridlock
-    stall_4w = gt(t4, 7.0) or gt(d4, 10.0)
-    stall_2w = gt(t2, 5.0) or gt(d2, 8.0)
-    only_2w = m["n_4w"] < 2
-    if only_2w:
-        time_ok = gt(t2, 5.5) or gt(d2, 8.5)
-    else:
-        time_ok = stall_4w and (stall_2w or m["n_2w"] == 0)
-    macro_ok = v <= cfg.v_stall or o >= 0.70
-    if dense_g and time_ok and macro_ok: return "GRIDLOCKED"
-    if o >= cfg.o_rescue and v <= cfg.v_stall and w >= cfg.w_rescue: return "GRIDLOCKED"
-    # 3. CONGESTED
-    dense_c = w >= cfg.w_congested or o >= cfg.o_congested
-    slow = (gt(t4, 3.0) or gt(d4, 5.0) or gt(t2, 3.0) or gt(d2, 4.5)
-            or (cfg.v_stall < v < cfg.v_clear and o >= cfg.o_congested))
-    if dense_c and slow: return "CONGESTED"
-    return "CLEAR"
+    has_vehicles = (w >= cfg.w_sanity_min) or any(x is not None for x in (t2, t4, d2, d4))
+    has_time = any(x is not None for x in (t2, t4, d2, d4))
+
+    time_clear = has_time and all(
+        x is None or float(x) <= th
+        for x, th in ((t4, cfg.congested_t50_4w_s), (d4, cfg.congested_d85_4w_s),
+                      (t2, cfg.congested_t50_2w_s), (d2, cfg.congested_d85_2w_s))
+    )
+    time_congested = (gt(t4, cfg.congested_t50_4w_s) or gt(d4, cfg.congested_d85_4w_s)
+                      or gt(t2, cfg.congested_t50_2w_s) or gt(d2, cfg.congested_d85_2w_s))
+    time_gridlock = (gt(t4, cfg.gridlock_t50_4w_s) or gt(d4, cfg.gridlock_d85_4w_s)
+                     or gt(t2, cfg.gridlock_t50_2w_s) or gt(d2, cfg.gridlock_d85_2w_s))
+
+    # 1. Đường vắng / thoáng (O_vis < 40%) hoặc không có phương tiện thật (lọc nhiễu đèn pha đêm mưa)
+    if o < cfg.o_clear or not has_vehicles:
+        conf = 0.85 + (0.10 if v > cfg.v_clear_min else 0.0)
+        return "CLEAR", round(min(0.98, conf), 2)
+
+    # 2. GRIDLOCKED: O_vis >= 85% và (Flow <= 15 px/s kèm T50/D85 vượt ngưỡng kẹt HOẶC Macro-only Flow <= 6 px/s)
+    if o >= cfg.o_gridlock:
+        if (time_gridlock and v <= cfg.v_gridlock_max) or (not has_time and v <= cfg.v_stall):
+            conf = 0.75 + (0.13 if time_gridlock else 0.0) + (0.10 if w >= 24.0 else 0.0)
+            return "GRIDLOCKED", round(min(0.98, conf), 2)
+
+    # 3. CONGESTED: O_vis >= 70% và (Flow <= 25 px/s kèm T50/D85 vượt ngưỡng CLEAR HOẶC Macro-only Flow <= 18 px/s)
+    #    (Hoặc khi 40% <= O_vis < 70% nhưng cả T50/D85 đều báo kẹt nặng time_gridlock)
+    if o >= cfg.o_congested:
+        if (time_congested and v <= cfg.v_congested_max) or (not has_time and v <= cfg.v_congested_macro):
+            conf = 0.72 + (0.14 if time_congested else 0.0) + (0.10 if w >= 15.0 else 0.0)
+            return "CONGESTED", round(min(0.98, conf), 2)
+    elif time_gridlock and v <= cfg.v_gridlock_max:
+        return "CONGESTED", 0.82
+
+    # 4. CLEAR (Đông xe 40% <= O_vis < 70% nhưng lưu thông tốc độ trung bình 10..35 px/s, T50/D85 thấp)
+    conf = 0.75 + (0.12 if time_clear else 0.0) + (0.08 if v >= cfg.v_clear_min else 0.0)
+    return "CLEAR", round(min(0.98, conf), 2)
 ```
-**Xong khi:** `tests/test_classifier.py` có ≥ 8 case: đường vắng 1 ô tô đỗ (w=3, d4=60) → CLEAR; ô tô kẹt + xe máy lách (t4=9, t2=4, w=20) → CONGESTED; kẹt cứng (o=0.8, v=0.2, w=30, d4=25, d2=15) → GRIDLOCKED; rescue khi t50 None, v.v.
+**Xong khi:** `tests/test_classifier.py` kiểm tra đầy đủ: đường vắng (`O_vis=0.25, Flow=18`) → `CLEAR`; đường đông chạy TB (`O_vis=0.55, Flow=18, T50_4W=4.8`) → `CLEAR`; đêm mưa không xe (`O_vis=0.80, Flow=2.0, W=0`) → `CLEAR`; ùn tắc (`O_vis=0.78, Flow=14, T50_4W=10.5`) → `CONGESTED`; kẹt cứng (`O_vis=0.88, Flow=4.5, D85_4W=24.0`) → `GRIDLOCKED`; Macro-only khi thiếu `T50/D85` (`O_vis=0.88, Flow=4.0, W=6.0`) → `GRIDLOCKED`.
 
 ---
 
-## B9. `decision/state_machine.py`
+## B9. `decision/state_machine.py` — Chu kỳ Sự kiện `3p → +2p (5p) → mỗi +15p` & Chuyển trạng thái
 
 ```python
+@dataclass
+class EventTrigger:
+    state: str          # "CONGESTED" | "GRIDLOCKED" | "CLEAR"
+    stage: str          # "CONFIRMED_3M" | "FOLLOWUP_5M" | "PERIODIC_15M" | "TRANSITION" | "RECOVERED_CLEAR"
+    duration_s: float
+
 class StateMachine:
     def __init__(self, cfg, has_traffic_light: bool): ...
-    def update(self, raw: str, now: float, stream_ok: bool, occ: str) -> tuple[str, str | None]:
-        """Trả (display_state, new_event_state|None)."""
+    def update(self, raw: str, now: float, stream_ok: bool, occ: str) -> tuple[str, EventTrigger | None]:
+        """Trả (display_state, EventTrigger | None)."""
 ```
 Logic:
 1. `stream_ok=False` (không frame > 5 s) → `display="UNKNOWN"`, không reset timer xác nhận, không sinh event.
 2. `occ == "HOLD"` → dùng lại `display` trước đó (không cập nhật lịch sử). `"UNKNOWN_HOLD"` → `display="UNKNOWN"`.
-3. Bình thường: thêm `(now, raw)` vào deque 5 s; `display = mode` (giá trị xuất hiện nhiều nhất; hòa → chọn mức nặng hơn).
-4. **Hysteresis thoát:** nếu `display` trước là CONGESTED/GRIDLOCKED và mode mới là CLEAR → chỉ chuyển về CLEAR khi CLEAR liên tục ≥ `exit_clear_s`.
-5. **Xác nhận sự kiện:** giữ `level_since[level]` cho `CONGESTED` (tính khi display ≥ CONGESTED) và `GRIDLOCKED`. Nếu display rớt xuống dưới mức quá `persistence_tolerance_s` → reset timer mức đó.
-   - `GRIDLOCKED` duy trì ≥ `confirm_gridlock_s` → event GRIDLOCKED (nếu confirmed hiện tại khác GRIDLOCKED hoặc đã hết cooldown).
-   - `CONGESTED+` duy trì ≥ `confirm_congested_s` (hoặc `_light_s` nếu có đèn) và confirmed hiện tại là CLEAR → event CONGESTED.
-   - Nâng cấp CONGESTED→GRIDLOCKED bắn ngay khi đủ điều kiện, bỏ qua cooldown.
-   - Khi display về CLEAR ổn định → `confirmed="CLEAR"` (không phát event cho CLEAR).
+3. **Làm mượt `display_state` (5s majority smoothing + Exit hysteresis 15s)** và **Giữ đèn đỏ `90s` (`red_light_hold_s`)**:
+   - Nếu `has_traffic_light=True` và `confirmed_state == "CLEAR"`, trong `90s` đầu tiên kể từ khi chớm dừng chờ đèn đỏ, chưa phát cảnh báo.
+4. **Chu kỳ Xác nhận `3 phút (180s)` $\rightarrow$ Nhắc `+2 phút (mốc 5p = 300s)` $\rightarrow$ Định kỳ `+15 phút (900s)`:**
+   - Theo dõi thời gian duy trì liên tục của trạng thái hiện tại `candidate_state` (với dung sai dao động ngắn `persistence_tolerance_s = 5.0s`).
+   - **Khi `confirmed_state == "CLEAR"` và `candidate_state` là `"CONGESTED"` hoặc `"GRIDLOCKED"`:**
+     - Đủ `confirm_state_s` (`180s`): chốt `confirmed_state = candidate_state`, bắn sự kiện lần 1 `stage = "CONFIRMED_3M"`.
+   - **Khi đang ở `confirmed_state` (`"CONGESTED"` hoặc `"GRIDLOCKED"`) và trạng thái không đổi:**
+     - Tại mốc `confirm_state_s + followup_after_confirm_s` (`180s + 120s = 300s` = **5 phút**): bắn sự kiện nhắc `stage = "FOLLOWUP_5M"`.
+     - Sau mốc 5 phút, cứ mỗi `+periodic_reminder_s` (`+900s` = **+15 phút**: mốc `20p, 35p, 50p...`): bắn sự kiện định kỳ `stage = "PERIODIC_15M"`.
+   - **Khi đã ở `confirmed_state` (`"CONGESTED"` hoặc `"GRIDLOCKED"`, tức đã qua 3 phút đầu) mà chuyển sang trạng thái mới (`"CLEAR"`, `"GRIDLOCKED"` hoặc `"CONGESTED"`):**
+     - Khi trạng thái mới duy trì ổn định đủ `confirm_state_s` (`180s` = **3 phút**):
+       - Nếu trạng thái mới là `"CLEAR"`: đổi `confirmed_state = "CLEAR"`, **bắn ngay sự kiện giải tỏa `stage = "RECOVERED_CLEAR"`** và dừng bộ đếm nhắc lại.
+       - Nếu trạng thái mới là `"GRIDLOCKED"` (hoặc `"CONGESTED"`): đổi `confirmed_state = candidate_state`, **bắn ngay sự kiện chuyển trạng thái `stage = "TRANSITION"`** và bắt đầu chu kỳ nhắc `+2p → +15p` mới cho trạng thái đó!
 
-**Xong khi:** unit test chuỗi thời gian giả: 70 s CONGESTED → đúng 1 event; đèn đỏ 50 s xen 30 s CLEAR → 0 event.
+**Xong khi:** unit test chuỗi thời gian giả kiểm tra đủ 4 mốc: `180s` (`CONFIRMED_3M`) → `300s` (`FOLLOWUP_5M`) → `1200s` (`PERIODIC_15M`) → chuyển sang `CLEAR` hoặc `GRIDLOCKED` giữ đủ `180s` bắn ngay `RECOVERED_CLEAR` / `TRANSITION`.
 
 ---
 

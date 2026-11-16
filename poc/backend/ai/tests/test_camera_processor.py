@@ -29,3 +29,7 @@ def test_update_meta_and_set_zone_do_not_deadlock() -> None:
     assert proc.sm.has_traffic_light is True
     assert proc.zone_px is not None
     assert proc.zone_px.shape == (4, 2)
+
+    idle = proc.idle_result(0.0)
+    assert idle["state_conf"] == 0.0
+    assert idle["metrics"]["state_conf"] == 0.0

@@ -1,16 +1,26 @@
-"""Two-layer state machine: smoothed Provisional display + Confirmed events."""
+"""Two-layer state machine V2: smoothed display + 3m/5m/15m event lifecycle."""
 
 from __future__ import annotations
 
 from collections import Counter, deque
+from dataclasses import dataclass
 
 from ai.config import AIConfig
 
 _SEVERITY = {"CLEAR": 0, "CONGESTED": 1, "GRIDLOCKED": 2}
 
 
+@dataclass(frozen=True)
+class EventTrigger:
+    """Event emitted by StateMachine when a state is confirmed, reminded, or transitioned."""
+
+    state: str
+    stage: str  # CONFIRMED_3M | FOLLOWUP_5M | PERIODIC_15M | TRANSITION | RECOVERED_CLEAR
+    duration_s: float
+
+
 class StateMachine:
-    """Manages Live Provisional state (5s smoothing + exit hysteresis) and Confirmed events."""
+    """Manages Live Provisional state (5s smoothing + exit hysteresis) and V2 Event Lifecycle."""
 
     def __init__(self, cfg: AIConfig, has_traffic_light: bool = False) -> None:
         self.cfg = cfg
@@ -20,9 +30,18 @@ class StateMachine:
         self.confirmed_state: str = "CLEAR"
 
         self._clear_since: float | None = None
-        self._level_since: dict[str, float | None] = {"CONGESTED": None, "GRIDLOCKED": None}
-        self._level_drop_since: dict[str, float | None] = {"CONGESTED": None, "GRIDLOCKED": None}
-        self._last_event_t: dict[str, float] = {"CONGESTED": -1e9, "GRIDLOCKED": -1e9}
+        self._confirmed_since: float | None = None
+        self._next_reminder_at: float | None = None
+        self._followup_sent: bool = False
+
+        self._candidate_state: str | None = None
+        self._candidate_since: float | None = None
+        self._candidate_drop_since: float | None = None
+
+    def _clear_candidate(self) -> None:
+        self._candidate_state = None
+        self._candidate_since = None
+        self._candidate_drop_since = None
 
     def update(
         self,
@@ -30,8 +49,8 @@ class StateMachine:
         now: float,
         stream_ok: bool,
         occ: str,
-    ) -> tuple[str, str | None]:
-        """Update state machine and return (display_state, new_confirmed_event | None)."""
+    ) -> tuple[str, EventTrigger | None]:
+        """Update state machine and return (display_state, EventTrigger | None)."""
         if not stream_ok:
             return "UNKNOWN", None
 
@@ -68,62 +87,71 @@ class StateMachine:
             self._clear_since = None
             self.display_state = mode_state
 
-        # 3. Confirmed event timers with persistence tolerance
-        new_event: str | None = None
-
-        # Track CONGESTED+ timer
-        if self.display_state in ("CONGESTED", "GRIDLOCKED"):
-            self._level_drop_since["CONGESTED"] = None
-            if self._level_since["CONGESTED"] is None:
-                self._level_since["CONGESTED"] = now
+        # 3. Track candidate state differing from confirmed_state (with tolerance)
+        if self.display_state != self.confirmed_state:
+            self._candidate_drop_since = None
+            if self._candidate_state != self.display_state:
+                self._candidate_state = self.display_state
+                self._candidate_since = now
         else:
-            if self._level_since["CONGESTED"] is not None:
-                if self._level_drop_since["CONGESTED"] is None:
-                    self._level_drop_since["CONGESTED"] = now
-                elif (now - self._level_drop_since["CONGESTED"]) > self.cfg.persistence_tolerance_s:
-                    self._level_since["CONGESTED"] = None
-                    self._level_drop_since["CONGESTED"] = None
+            if self._candidate_state is not None:
+                if self._candidate_drop_since is None:
+                    self._candidate_drop_since = now
+                elif (now - self._candidate_drop_since) > self.cfg.persistence_tolerance_s:
+                    self._clear_candidate()
 
-        # Track GRIDLOCKED timer
-        if self.display_state == "GRIDLOCKED":
-            self._level_drop_since["GRIDLOCKED"] = None
-            if self._level_since["GRIDLOCKED"] is None:
-                self._level_since["GRIDLOCKED"] = now
-        else:
-            if self._level_since["GRIDLOCKED"] is not None:
-                if self._level_drop_since["GRIDLOCKED"] is None:
-                    self._level_drop_since["GRIDLOCKED"] = now
-                elif (now - self._level_drop_since["GRIDLOCKED"]) > self.cfg.persistence_tolerance_s:
-                    self._level_since["GRIDLOCKED"] = None
-                    self._level_drop_since["GRIDLOCKED"] = None
+        # 4. Check confirmation / transition (3m = 180s; includes 90s red-light hold)
+        if self._candidate_state is not None and self._candidate_since is not None:
+            req_s = self.cfg.confirm_state_s
+            if self.confirmed_state == "CLEAR" and self.has_traffic_light:
+                req_s = max(req_s, self.cfg.red_light_hold_s)
 
-        # Check GRIDLOCKED confirmation first (can upgrade from CONGESTED immediately)
-        g_since = self._level_since["GRIDLOCKED"]
-        if g_since is not None and (now - g_since) >= self.cfg.confirm_gridlock_s:
-            if (
-                self.confirmed_state != "GRIDLOCKED"
-                or (now - self._last_event_t["GRIDLOCKED"]) >= self.cfg.cooldown_s
-            ):
-                self.confirmed_state = "GRIDLOCKED"
-                self._last_event_t["GRIDLOCKED"] = now
-                new_event = "GRIDLOCKED"
+            if (now - self._candidate_since) >= req_s:
+                target = self._candidate_state
+                if target == "CLEAR":
+                    dur = (now - self._confirmed_since) if self._confirmed_since is not None else req_s
+                    self.confirmed_state = "CLEAR"
+                    self._confirmed_since = None
+                    self._next_reminder_at = None
+                    self._followup_sent = False
+                    self._clear_candidate()
+                    return self.display_state, EventTrigger(
+                        state="CLEAR",
+                        stage="RECOVERED_CLEAR",
+                        duration_s=dur,
+                    )
 
-        # Check CONGESTED confirmation
-        if new_event is None:
-            c_req = (
-                self.cfg.confirm_congested_light_s
-                if self.has_traffic_light
-                else self.cfg.confirm_congested_s
+                stage = "CONFIRMED_3M" if self.confirmed_state == "CLEAR" else "TRANSITION"
+                self.confirmed_state = target
+                self._confirmed_since = self._candidate_since
+                self._next_reminder_at = (
+                    self._confirmed_since
+                    + self.cfg.confirm_state_s
+                    + self.cfg.followup_after_confirm_s
+                )
+                self._followup_sent = False
+                self._clear_candidate()
+                return self.display_state, EventTrigger(
+                    state=self.confirmed_state,
+                    stage=stage,
+                    duration_s=now - self._confirmed_since,
+                )
+
+        # 5. Periodic reminders when confirmed CONGESTED / GRIDLOCKED persists
+        if (
+            self.confirmed_state in ("CONGESTED", "GRIDLOCKED")
+            and self.display_state == self.confirmed_state
+            and self._next_reminder_at is not None
+            and now >= self._next_reminder_at
+        ):
+            stage = "PERIODIC_15M" if self._followup_sent else "FOLLOWUP_5M"
+            self._followup_sent = True
+            self._next_reminder_at += self.cfg.periodic_reminder_s
+            dur = (now - self._confirmed_since) if self._confirmed_since is not None else 0.0
+            return self.display_state, EventTrigger(
+                state=self.confirmed_state,
+                stage=stage,
+                duration_s=dur,
             )
-            c_since = self._level_since["CONGESTED"]
-            if c_since is not None and (now - c_since) >= c_req and self.confirmed_state == "CLEAR":
-                if (now - self._last_event_t["CONGESTED"]) >= self.cfg.cooldown_s:
-                    self.confirmed_state = "CONGESTED"
-                    self._last_event_t["CONGESTED"] = now
-                    new_event = "CONGESTED"
 
-        # Reset confirmed_state when display stably returns to CLEAR
-        if self.display_state == "CLEAR":
-            self.confirmed_state = "CLEAR"
-
-        return self.display_state, new_event
+        return self.display_state, None

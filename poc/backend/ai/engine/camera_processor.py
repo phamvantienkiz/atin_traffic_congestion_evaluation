@@ -128,17 +128,21 @@ class CameraProcessor:
                 float(zm["d85_2w"] or 0.0),
                 float(zm["d85_4w"] or 0.0),
             )
+            prev_o = float(self._last_result["metrics"]["o_vis"]) if self._last_result else 0.0
+            n_veh = int(zm["n_2w"] or 0) + int(zm["n_4w"] or 0)
+            stalled_hint = (d85_max > 5.0) or (prev_o >= self.cfg.o_congested and n_veh >= 2)
             o_vis, v_flow = self.flow_occ.update(
                 frame,
                 bboxes_arr,
                 dt=dt,
-                stalled_hint=(d85_max > 5.0),
+                stalled_hint=stalled_hint,
             )
 
             occ = self.occlusion.update(tracks, o_vis, now)
             metrics = {**zm, "o_vis": o_vis, "v_flow": v_flow}
-            raw_state = classify(metrics, self.cfg)
-            display_state, new_ev = self.sm.update(
+            raw_state, state_conf = classify(metrics, self.cfg)
+            metrics["state_conf"] = state_conf
+            display_state, ev_trigger = self.sm.update(
                 raw_state,
                 now,
                 stream_ok=self.reader.healthy,
@@ -174,26 +178,20 @@ class CameraProcessor:
                 "metrics": metrics,
                 "raw_state": raw_state,
                 "state": display_state,
+                "state_conf": state_conf,
                 "occlusion_hold": occ == "HOLD",
                 "confirmed_state": self.sm.confirmed_state,
             }
             self._last_result = result
 
-            if new_ev is not None:
-                dur_s = (
-                    self.cfg.confirm_gridlock_s
-                    if new_ev == "GRIDLOCKED"
-                    else (
-                        self.cfg.confirm_congested_light_s
-                        if self.sm.has_traffic_light
-                        else self.cfg.confirm_congested_s
-                    )
-                )
+            if ev_trigger is not None:
                 partial = {
                     "camera_id": self.cam_id,
-                    "state": new_ev,
+                    "state": ev_trigger.state,
+                    "event_stage": ev_trigger.stage,
+                    "confidence": state_conf,
                     "ts": round(ts_wall, 3),
-                    "duration_s": round(dur_s),
+                    "duration_s": round(ev_trigger.duration_s),
                     "metrics": metrics,
                     "detections": detections,
                 }
@@ -230,9 +228,11 @@ class CameraProcessor:
                     "n_completed_4w": 0,
                     "o_vis": 0.0,
                     "v_flow": 0.0,
+                    "state_conf": 0.0,
                 },
                 "raw_state": "CLEAR",
                 "state": "UNKNOWN" if not healthy else "CLEAR",
+                "state_conf": 0.0,
                 "occlusion_hold": False,
                 "confirmed_state": "CLEAR",
             }

@@ -1,58 +1,93 @@
-"""Unit tests for ai.decision.state_machine."""
+"""Unit tests for ai.decision.state_machine (V2 event lifecycle)."""
 
 from __future__ import annotations
 
 from ai.config import AIConfig
-from ai.decision.state_machine import StateMachine
+from ai.decision.state_machine import EventTrigger, StateMachine
 
 
-def test_sustained_congested_emits_single_event() -> None:
-    cfg = AIConfig(confirm_congested_s=60.0, cooldown_s=60.0)
+def test_lifecycle_3m_5m_15m_and_recover() -> None:
+    cfg = AIConfig(
+        confirm_state_s=180.0,
+        followup_after_confirm_s=120.0,
+        periodic_reminder_s=900.0,
+        exit_clear_s=15.0,
+    )
     sm = StateMachine(cfg, has_traffic_light=False)
 
-    events: list[str] = []
-    for t in range(0, 71):
+    emitted: list[tuple[int, EventTrigger]] = []
+    # Continuous CONGESTED from t=0 to t=2110s
+    for t in range(0, 2110):
         _, ev = sm.update("CONGESTED", float(t), stream_ok=True, occ="NONE")
         if ev is not None:
-            events.append(ev)
+            emitted.append((t, ev))
 
-    assert events == ["CONGESTED"]
+    assert [(t, ev.state, ev.stage) for t, ev in emitted] == [
+        (180, "CONGESTED", "CONFIRMED_3M"),
+        (300, "CONGESTED", "FOLLOWUP_5M"),
+        (1200, "CONGESTED", "PERIODIC_15M"),
+        (2100, "CONGESTED", "PERIODIC_15M"),
+    ]
+
+    # Recover to CLEAR: display switches after exit_clear_s (15s), RECOVERED_CLEAR fires 180s after that
+    rec: list[tuple[int, EventTrigger]] = []
+    for t in range(2110, 2320):
+        _, ev = sm.update("CLEAR", float(t), stream_ok=True, occ="NONE")
+        if ev is not None:
+            rec.append((t, ev))
+
+    assert len(rec) == 1
+    assert rec[0][1].state == "CLEAR"
+    assert rec[0][1].stage == "RECOVERED_CLEAR"
+    assert sm.confirmed_state == "CLEAR"
 
 
 def test_traffic_light_cycle_no_false_event() -> None:
-    cfg = AIConfig(confirm_congested_light_s=90.0, exit_clear_s=15.0)
+    cfg = AIConfig(red_light_hold_s=90.0, confirm_state_s=180.0, exit_clear_s=15.0)
     sm = StateMachine(cfg, has_traffic_light=True)
 
-    events: list[str] = []
-    # 50s CONGESTED (red light) followed by 30s CLEAR (green light)
-    for t in range(0, 50):
+    events: list[EventTrigger] = []
+    # 75s red light followed by 30s green light -> no event
+    for t in range(0, 75):
         _, ev = sm.update("CONGESTED", float(t), stream_ok=True, occ="NONE")
         if ev:
             events.append(ev)
-    for t in range(50, 80):
+    for t in range(75, 105):
         _, ev = sm.update("CLEAR", float(t), stream_ok=True, occ="NONE")
         if ev:
             events.append(ev)
 
     assert events == []
     assert sm.display_state == "CLEAR"
+    assert sm.confirmed_state == "CLEAR"
 
 
-def test_upgrade_congested_to_gridlocked_bypasses_cooldown() -> None:
-    cfg = AIConfig(confirm_congested_s=20.0, confirm_gridlock_s=40.0, cooldown_s=60.0)
+def test_transition_congested_to_gridlocked_fires_immediately_after_3m() -> None:
+    cfg = AIConfig(
+        confirm_state_s=180.0,
+        followup_after_confirm_s=120.0,
+        periodic_reminder_s=900.0,
+    )
     sm = StateMachine(cfg, has_traffic_light=False)
 
-    events: list[tuple[int, str]] = []
-    for t in range(0, 25):
+    events: list[tuple[int, EventTrigger]] = []
+    for t in range(0, 185):
         _, ev = sm.update("CONGESTED", float(t), stream_ok=True, occ="NONE")
         if ev:
             events.append((t, ev))
-    for t in range(25, 70):
+    for t in range(185, 500):
         _, ev = sm.update("GRIDLOCKED", float(t), stream_ok=True, occ="NONE")
         if ev:
             events.append((t, ev))
 
-    assert [e for _, e in events] == ["CONGESTED", "GRIDLOCKED"]
+    # Expect CONFIRMED_3M at 180s, then TRANSITION to GRIDLOCKED around 188+180=368s,
+    # then FOLLOWUP_5M for GRIDLOCKED 120s later (~488s)
+    stages = [(ev.state, ev.stage) for _, ev in events]
+    assert stages == [
+        ("CONGESTED", "CONFIRMED_3M"),
+        ("GRIDLOCKED", "TRANSITION"),
+        ("GRIDLOCKED", "FOLLOWUP_5M"),
+    ]
 
 
 def test_stream_offline_and_occlusion_hold() -> None:

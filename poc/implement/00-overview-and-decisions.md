@@ -13,6 +13,10 @@
 | [03-backend.md](./03-backend.md) | `poc/backend/`: FastAPI, API camera/zone, WebSocket, Snapshot (chứa luôn `ai/`) | Backend |
 | [04-frontend.md](./04-frontend.md) | `poc/frontend/`: HTML/CSS/JS, WebRTC, Canvas overlay, vẽ Zone, Event feed | Frontend |
 | [05-integration-test-and-demo.md](./05-integration-test-and-demo.md) | Kiểm thử, tinh chỉnh ngưỡng, kịch bản demo | Tất cả |
+| [06-implementation-report.md](./06-implementation-report.md) | Báo cáo triển khai thực tế PoC Phase 1 & xử lý sự cố | Tất cả |
+| [07-changelog.md](./07-changelog.md) | Nhật ký thay đổi ngưỡng & logic qua các phiên bản (đọc kèm khi implement) | Tất cả |
+| [09-parameter-and-system-evaluation.md](./09-parameter-and-system-evaluation.md) | Phân tích đánh giá vai trò 5 tham số, tải xử lý Backend, Bandwidth & UI | Tất cả |
+| [10-threshold-and-event-lifecycle-spec.md](./10-threshold-and-event-lifecycle-spec.md) | Đặc tả V2: Bộ ngưỡng `18–22m` (`O_vis 40%/70%/85%`), `state_conf` & chu kỳ sự kiện `3p → 5p → 15p` | AI / Backend / Frontend |
 
 ## 2. Quyết định kỹ thuật đã CHỐT (ưu tiên đơn giản — PoC Phase 1)
 
@@ -24,7 +28,7 @@
 | D4 | Hiển thị video trên web | `<iframe>` trang WebRTC có sẵn của MediaMTX `http://<host>:8889/camX/?controls=false&muted=true&autoplay=true` + `<canvas>` đè lên. Fallback: `<img>` MJPEG `/api/cameras/{id}/mjpeg` từ backend. | Không phải tự viết WHEP client. |
 | D5 | Inference runtime | **Ultralytics + PyTorch `.pt`, `half=True`, `device=cuda:0`**. ONNX chỉ là tùy chọn (script export có sẵn). **Không dùng TensorRT** ở Phase 1. | 0% rủi ro môi trường, đủ nhanh cho ≤ 8–10 cam. |
 | D6 | Batching | 1 thread `GpuBatcher` chạy nhịp **66.7 ms**, gom frame mới của mọi camera → `model.predict(list, ...)` 1 lần. | Không tranh chấp GPU. |
-| D7 | ROI crop | Cắt hình chữ nhật bao Poly Zone + lề 10%. Chưa có zone → dùng nguyên khung. | Xe xa to hơn, ít nhiễu. |
+| D7 | Poly Zone (`18–22m`), `flow_zone_px` (+20%) & ROI crop | Vẽ `Poly Zone` gốc dài `3 vạch + 2–3 khoảng trống` (`18–22m`). Tự động kéo giãn dọc trục đường `+20%` mỗi đầu tạo `flow_zone_px` (dùng cho `O_vis`, `Flow` và cắt ROI `10%` chạy YOLO). | Bao quát đầy đủ ngữ cảnh đầu vào/ra cho `O_vis` và `Flow`, phóng to xe xa. |
 | D8 | Tracker | **`supervision.ByteTrack`** — mỗi camera 1 instance (không dùng `model.track()` vì không hỗ trợ batch nhiều nguồn). | Dễ dùng, tách biệt từng camera. |
 | D9 | Hậu xử lý | Chạy tuần tự trong thread `GpuBatcher` sau khi có kết quả (8 cam × ~2 ms = ~16 ms, vẫn < 66.7 ms). Chỉ dùng `ThreadPoolExecutor` nếu đo thấy vượt ngân sách. | Đơn giản, không race condition. |
 | D10 | Đồng hồ | Mọi tính toán thời gian dùng `time.monotonic()`; payload gửi web dùng `time.time()`. | Không bị ảnh hưởng chỉnh giờ hệ thống. |
@@ -32,11 +36,12 @@
 | D12 | Đẩy kết quả | 1 WebSocket `/ws` broadcast mọi camera, **5 Hz** (mỗi 200 ms gửi trạng thái mới nhất). | Đủ mượt cho BBox, nhẹ mạng. |
 | D13 | Sự kiện | Lưu trong RAM (deque 200) + ảnh JPEG trong `poc/backend/data/snapshots/`. | PoC. |
 | D14 | Frontend | **HTML + CSS + Vanilla JS**, tái sử dụng style "Soft Clean Cards" từ `scripts/RTSP/styles.css`. Không build tool. | Nhanh. |
-| D15 | Thời gian xác nhận sự kiện | Cấu hình được, mặc định `60s/120s`; có **"Demo mode" `15s/30s`** bật bằng biến môi trường `DEMO_MODE=1`. | Cấp trên không phải chờ lâu. |
+| D15 | Chu kỳ xác nhận & nhắc lại sự kiện | - **Xác nhận ban đầu:** duy trì liên tục **3 phút (`180s`)** → bắn sự kiện lần 1 (`CONFIRMED_3M`); bao hàm bộ đếm chờ đèn đỏ **`90s`** cho khu vực có đèn.<br>- **Nhắc lại:** sau **`+2 phút` (tổng `5 phút = 300s`, `FOLLOWUP_5M`)**, sau đó **mỗi `+15 phút` (`900s`, `PERIODIC_15M`)**.<br>- **Chuyển trạng thái (sau mốc 3p):** khi chuyển sang `CLEAR` hoặc `GRIDLOCKED` và giữ ổn định đủ **3 phút (`180s`)** → **bắn ngay sự kiện chuyển trạng thái** (`TRANSITION` / `RECOVERED_CLEAR`).<br>- Khi `DEMO_MODE=1`: rút xuống `30s / +20s / +90s`. | Đúng nghiệp vụ giám sát điều hành thực tế (xem file 10). |
 | D16 | Bảo mật | Không auth (chỉ truy cập qua VPN/SSH tunnel). Bind `0.0.0.0` nhưng chỉ mở qua tunnel. | PoC nội bộ. |
-| D17 | OS Server | Giả định **Ubuntu 20.04/22.04 + NVIDIA driver ≥ 525**. Python **3.10/3.11** qua `uv`. | Phổ biến. |
+| D17 | OS Server | Giả định **Ubuntu 20.04/22.04 + NVIDIA driver ≥ 525**. Python **3.10/3.12** qua `uv`. | Phổ biến. |
 | D18 | Lớp model | Model [models/vehicle_n_best.pt](../../models/vehicle_n_best.pt) đã xác nhận có **4 lớp**: `{0: 'bus', 1: 'car', 2: 'motobike', 3: 'truck'}`. Map `motobike` (và `motorcycle`/`bicycle` nếu dùng model dự phòng `yolo26s.pt`) → nhóm `2W`; `car/bus/truck` → `4W`. | Đọc trực tiếp từ metadata checkpoint. |
-| D19 | Codec & Phát video | Mặc định ưu tiên **MediaMTX WebRTC** (cần camera xuất H.264) + **Fallback MJPEG** (`/api/cameras/{id}/mjpeg`, giống cơ chế trong [scripts/RTSP/server.py](../../scripts/RTSP/server.py) giải mã bằng OpenCV ở server nên chạy được cả H.264 lẫn H.265). | Đảm bảo 100% lên hình với mọi loại camera. |
+| D19 | Codec & Phát video | Mặc định ưu tiên **MJPEG** hoặc **MediaMTX WebRTC** (tùy codec camera H.265 hay H.264; MJPEG giải mã bằng OpenCV ở server nên chạy được cả H.264 lẫn H.265). | Đảm bảo 100% lên hình với mọi loại camera. |
+| D20 | Vai trò `O_vis`, `Flow`, `T50/D85` & Loại bỏ ngưỡng cứng `W` | - **Bỏ các ngưỡng chặn cứng `W_CLEAR/W_CONGESTED/W_GRIDLOCK` và ẩn `W` trên thẻ UI Live View**.<br>- Lấy **`O_vis` (`<40%` / `70–85%` / `>=85%`) + `Flow` + `T50/D85`** làm trụ cột phân loại.<br>- Giữ trọng số xe (`1.0 / 3.0 / 6.0`) để làm cổng an toàn `W_SANITY_MIN = 3.0` (chống nhiễu đêm mưa) và kết hợp với `T50/D85` để tính **điểm tự tin `state_conf` (`0.55 .. 0.98`)**. | Không bị lệch khi vẽ zone to/nhỏ, hoạt động bền vững kể cả khi Prod bắt được ít BBox (xem file 09 & 10). |
 
 ## 3. Kiến trúc chốt
 
@@ -89,16 +94,19 @@ flowchart LR
     "w_total": 30.0, "n_2w": 18, "n_4w": 4,
     "t50_2w": 4.1, "t50_4w": 8.4, "d85_2w": 5.0, "d85_4w": 14.2,
     "n_completed_2w": 9, "n_completed_4w": 2,
-    "o_vis": 0.72, "v_flow": 0.3
+    "o_vis": 0.72, "v_flow": 14.5,
+    "state_conf": 0.92
   },
-  "raw_state": "GRIDLOCKED",
+  "raw_state": "CONGESTED",
   "state": "CONGESTED",
+  "state_conf": 0.92,
   "occlusion_hold": false,
   "confirmed_state": "CONGESTED"
 }
 ```
 - `bbox` = `[x1, y1, x2, y2]` chuẩn hóa. Giá trị `t50_*`/`d85_*` = `null` nếu không đủ mẫu.
 - `state` ∈ `UNKNOWN | CLEAR | CONGESTED | GRIDLOCKED` (trạng thái hiển thị góc dưới phải, đã làm mượt).
+- `state_conf` ∈ `[0.0 .. 1.0]` = điểm tự tin tổng hợp từ `O_vis + Flow` và cộng thưởng từ `T50/D85 + W_total`.
 - `confirmed_state` = trạng thái sự kiện đã xác nhận gần nhất (hoặc `CLEAR`).
 
 ### 4.3. Thông điệp WebSocket `/ws` (server → client)
@@ -109,9 +117,11 @@ flowchart LR
 
 ### 4.4. Sự kiện (`Event`)
 ```json
-{"id": "evt_cam1_1762918200", "camera_id": "cam1", "camera_name": "...", "state": "GRIDLOCKED",
- "ts": 1762918200.1, "duration_s": 120, "snapshot_url": "/snapshots/evt_cam1_1762918200.jpg", "metrics": {...}}
+{"id": "evt_cam1_1762918200", "camera_id": "cam1", "camera_name": "...", "state": "CONGESTED",
+ "event_stage": "CONFIRMED_3M", "confidence": 0.92,
+ "ts": 1762918200.1, "duration_s": 180, "snapshot_url": "/snapshots/evt_cam1_1762918200.jpg", "metrics": {...}}
 ```
+- `event_stage` ∈ `"CONFIRMED_3M" | "FOLLOWUP_5M" | "PERIODIC_15M" | "TRANSITION" | "RECOVERED_CLEAR"`.
 
 ## 5. Lộ trình (khoảng 3 tuần, 1–2 dev)
 

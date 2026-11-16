@@ -82,7 +82,7 @@ def main() -> None:
         cw = csv.writer(f_csv)
         cw.writerow([
             "ts", "w_total", "n_2w", "n_4w", "t50_2w", "t50_4w",
-            "d85_2w", "d85_4w", "o_vis", "v_flow", "raw_state", "state", "occ",
+            "d85_2w", "d85_4w", "o_vis", "v_flow", "state_conf", "raw_state", "state", "occ",
         ])
 
         while True:
@@ -111,13 +111,13 @@ def main() -> None:
             occ = occlusion.update(tracks, o_vis, now)
 
             metrics = {**zm, "o_vis": o_vis, "v_flow": v_flow}
-            raw_state = classify(metrics, CFG)
+            raw_state, state_conf = classify(metrics, CFG)
             state, _ = sm.update(raw_state, now, stream_ok=True, occ=occ)
 
             cw.writerow([
                 round(now, 2), zm["w_total"], zm["n_2w"], zm["n_4w"],
                 zm["t50_2w"], zm["t50_4w"], zm["d85_2w"], zm["d85_4w"],
-                o_vis, v_flow, raw_state, state, occ,
+                o_vis, v_flow, state_conf, raw_state, state, occ,
             ])
 
             color = STATE_COLORS.get(state, (200, 200, 200))

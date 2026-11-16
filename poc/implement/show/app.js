@@ -69,35 +69,35 @@ const inT2 = document.getElementById('in-t2');
 const presetBtns = Array.from(document.querySelectorAll('.preset-btn'));
 
 const PRESETS = {
-  clear_fast: { w: 14.0, o: 42, v: 8.5, t4: 1.8, d4: 0, t2: 1.5, n2: 5, n4: 3 },
+  clear_fast: { w: 20.0, o: 45, v: 8.5, t4: 2.2, d4: 0, t2: 1.8, n2: 6, n4: 4 },
   night_parked: { w: 3.0, o: 12, v: 0.2, t4: 0, d4: 12, t2: 0, n2: 0, n4: 1 },
-  congested: { w: 18.0, o: 52, v: 3.2, t4: 4.5, d4: 6.0, t2: 3.5, n2: 6, n4: 4 },
-  gridlocked: { w: 28.0, o: 72, v: 0.4, t4: 9.0, d4: 13.0, t2: 6.5, n2: 10, n4: 6 },
-  rescue: { w: 20.0, o: 82, v: 0.5, t4: 0, d4: 0, t2: 0, n2: 4, n4: 4 },
+  congested: { w: 28.0, o: 60, v: 3.2, t4: 6.0, d4: 8.5, t2: 5.0, n2: 8, n4: 5 },
+  gridlocked: { w: 42.0, o: 76, v: 0.4, t4: 11.0, d4: 16.0, t2: 8.5, n2: 12, n4: 8 },
+  rescue: { w: 30.0, o: 84, v: 0.5, t4: 0, d4: 0, t2: 0, n2: 6, n4: 5 },
 };
-let simN2 = 5;
-let simN4 = 3;
+let simN2 = 6;
+let simN4 = 4;
 
 function runClassify(m) {
   const gt = (x, th) => x !== null && x > th;
-  if (m.w < 12.0 && m.o < 0.35) {
-    return { state: 'CLEAR', reason: 'W_total < 12.0 và O_vis < 35% (đường thoáng / ít xe).' };
+  if (m.w < 18.0 && m.o < 0.40) {
+    return { state: 'CLEAR', reason: 'W_total < 18.0 và O_vis < 40% (đường thoáng / ít xe).' };
   }
-  const denseG = m.w >= 24.0 || m.o >= 0.65;
-  const stall4w = gt(m.t4, 7.0) || gt(m.d4, 10.0);
-  const stall2w = gt(m.t2, 5.0) || gt(m.d2, 8.0);
-  const timeOk = m.n4 < 2 ? (gt(m.t2, 5.5) || gt(m.d2, 8.5)) : (stall4w && (stall2w || m.n2 === 0));
-  const macroOk = m.v <= 1.0 || m.o >= 0.70;
+  const denseG = m.w >= 38.0 || m.o >= 0.72;
+  const stall4w = gt(m.t4, 9.0) || gt(m.d4, 14.0);
+  const stall2w = gt(m.t2, 7.5) || gt(m.d2, 12.0);
+  const timeOk = m.n4 < 2 ? (gt(m.t2, 8.5) || gt(m.d2, 13.0)) : (stall4w && (stall2w || m.n2 === 0));
+  const macroOk = m.v <= 1.0 || m.o >= 0.75;
   if (denseG && timeOk && macroOk) {
-    return { state: 'GRIDLOCKED', reason: 'Mật độ cao (W ≥ 24 hoặc Phủ ≥ 65%) + dừng lâu (T50/D85) + V_flow ≤ 1.0.' };
+    return { state: 'GRIDLOCKED', reason: 'Mật độ cao (W ≥ 38 hoặc Phủ ≥ 72%) + dừng lâu (T50/D85) + V_flow ≤ 1.0 (hoặc Phủ ≥ 75%).' };
   }
-  if (m.o >= 0.75 && m.v <= 1.0 && m.w >= 18.0) {
-    return { state: 'GRIDLOCKED', reason: 'Nhánh Macro Rescue: Phủ ≥ 75%, V_flow ≤ 1.0 và W ≥ 18.0 (bù gãy track ByteTrack).' };
+  if (m.o >= 0.80 && m.v <= 1.0 && m.w >= 28.0) {
+    return { state: 'GRIDLOCKED', reason: 'Nhánh Macro Rescue: Phủ ≥ 80%, V_flow ≤ 1.0 và W ≥ 28.0 (bù gãy track ByteTrack).' };
   }
-  const denseC = m.w >= 15.0 || m.o >= 0.45;
-  const slow = gt(m.t4, 3.0) || gt(m.d4, 5.0) || gt(m.t2, 3.0) || gt(m.d2, 4.5) || (m.v > 1.0 && m.v < 6.0 && m.o >= 0.45);
+  const denseC = m.w >= 25.0 || m.o >= 0.55;
+  const slow = gt(m.t4, 5.0) || gt(m.d4, 7.5) || gt(m.t2, 4.5) || gt(m.d2, 7.0) || (m.v > 1.0 && m.v < 6.0 && m.o >= 0.55);
   if (denseC && slow) {
-    return { state: 'CONGESTED', reason: 'Mật độ đông (W ≥ 15 hoặc Phủ ≥ 45%) kèm di chuyển chậm (T50/D85 hoặc V_flow 1–6).' };
+    return { state: 'CONGESTED', reason: 'Mật độ đông (W ≥ 25 hoặc Phủ ≥ 55%) kèm di chuyển chậm (T50/D85 hoặc V_flow 1–6).' };
   }
   return { state: 'CLEAR', reason: 'Có xe trong vùng nhưng tốc độ thoát tốt, chưa thỏa điều kiện ùn tắc.' };
 }

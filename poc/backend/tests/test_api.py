@@ -44,10 +44,11 @@ class MockEngine:
                     "t50_2w": None, "t50_4w": None,
                     "d85_2w": None, "d85_4w": None,
                     "n_completed_2w": 0, "n_completed_4w": 0,
-                    "o_vis": 0.0, "v_flow": 0.0,
+                    "o_vis": 0.0, "v_flow": 0.0, "state_conf": 0.9,
                 },
                 "raw_state": "CLEAR",
                 "state": "CLEAR",
+                "state_conf": 0.9,
                 "occlusion_hold": False,
                 "confirmed_state": "CLEAR",
             }
@@ -130,4 +131,29 @@ def test_frontend_static_files_served(tmp_path: Path) -> None:
         assert "ATIN Traffic Congestion" in r.text
         assert client.get("/styles.css").status_code == 200
         assert client.get("/js/main.js").status_code == 200
+
+
+def test_event_store_records_stage_and_confidence(tmp_path: Path) -> None:
+    from schemas import Camera
+
+    events = EventStore(tmp_path / "snapshots")
+    cam = Camera(id="cam1", name="Cam 1", rtsp_url="rtsp://127.0.0.1/cam1")
+    frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+    ev = events.add(
+        {
+            "camera_id": "cam1",
+            "state": "CONGESTED",
+            "event_stage": "CONFIRMED_3M",
+            "confidence": 0.91,
+            "ts": 1700000000.0,
+            "duration_s": 180,
+            "metrics": {"o_vis": 0.75, "v_flow": 12.0},
+            "detections": [],
+        },
+        frame,
+        cam,
+    )
+    assert ev["event_stage"] == "CONFIRMED_3M"
+    assert ev["confidence"] == 0.91
+    assert (tmp_path / "snapshots" / f"{ev['id']}.jpg").exists()
 

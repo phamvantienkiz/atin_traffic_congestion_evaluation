@@ -25,7 +25,7 @@ export class CameraCard {
         </div>
       </div>
       <div class="zone-toolbar hidden">
-        <span class="zone-hint">Click các điểm bao đoạn đường ~2 vạch sơn + 2 khoảng trống (12–16 m), tối thiểu 3 điểm.</span>
+        <span class="zone-hint">Click các điểm bao đoạn đường ~3 vạch sơn + 2–3 khoảng trống (18–22 m), tối thiểu 3 điểm.</span>
         <button type="button" class="btn btn-xs z-undo">↶ Hoàn tác</button>
         <button type="button" class="btn btn-xs btn-danger z-clear">🗑 Xóa</button>
         <button type="button" class="btn btn-xs btn-primary z-save">💾 Lưu</button>
@@ -36,13 +36,16 @@ export class CameraCard {
         <img class="vid-mjpeg hidden" alt="MJPEG stream" />
         <img class="zone-bg hidden" alt="Snapshot nền vẽ zone" />
         <canvas></canvas>
-        <div class="state-badge">MẤT TÍN HIỆU</div>
-      </div>
-      <div class="cam-metrics">
-        <div>W: <strong class="m-w">–</strong> · 2B: <strong class="m-2w">–</strong> · 4B: <strong class="m-4w">–</strong></div>
-        <div>Phủ: <strong class="m-ovis">–</strong> · Flow: <strong class="m-flow">–</strong></div>
-        <div>T50 4B: <strong class="m-t4">–</strong> · 2B: <strong class="m-t2">–</strong></div>
-        <div>D85 4B: <strong class="m-d4">–</strong> · 2B: <strong class="m-d2">–</strong></div>
+        <div class="hud-overlay">
+          <div class="hud-row hud-top">
+            <span class="state-badge">MẤT TÍN HIỆU</span>
+            <span class="hud-conf">Tin cậy: <strong class="m-conf">–</strong></span>
+          </div>
+          <div class="hud-row">Độ phủ: <strong class="m-ovis">–</strong> · Dòng xe: <strong class="m-flow">–</strong></div>
+          <div class="hud-row">Trong vùng: <strong class="m-2w">–</strong> xe máy · <strong class="m-4w">–</strong> ô tô</div>
+          <div class="hud-row">Thoát vùng: Ô tô <strong class="m-t4">–</strong> · Xe máy <strong class="m-t2">–</strong></div>
+          <div class="hud-row">Dừng/chậm: Ô tô <strong class="m-d4">–</strong> · Xe máy <strong class="m-d2">–</strong></div>
+        </div>
       </div>
     `;
 
@@ -109,7 +112,8 @@ export class CameraCard {
       : meta.label;
 
     const m = res.metrics || {};
-    this.el.querySelector('.m-w').textContent = m.w_total != null ? Number(m.w_total).toFixed(1) : '–';
+    const conf = res.state_conf ?? m.state_conf;
+    this.el.querySelector('.m-conf').textContent = conf != null ? `${Math.round(Number(conf) * 100)}%` : '–';
     this.el.querySelector('.m-2w').textContent = m.n_2w ?? '–';
     this.el.querySelector('.m-4w').textContent = m.n_4w ?? '–';
     this.el.querySelector('.m-ovis').textContent = m.o_vis != null ? `${Math.round(m.o_vis * 100)}%` : '–';

@@ -1,48 +1,79 @@
-### 1. Nhóm W\_\* (W_CLEAR, W_CONGESTED, W_GRIDLOCK, W_RESCUE) — Điểm tải xe trong Poly Zone
+# HƯỚNG DẪN Ý NGHĨA & CÁCH TINH CHỈNH BỘ THAM SỐ NGƯỠNG (V2 — CHUẨN HÓA VÙNG 18–22M & LOẠI BỎ NGƯỠNG CỨNG `W`)
 
-W được tính từ cái gì?
+> Tài liệu giải thích trực quan ý nghĩa của từng nhóm tham số trong `.env` / `config.py` sau đợt đánh giá thực tế cùng PM (xem thêm [09-parameter-and-system-evaluation.md](./09-parameter-and-system-evaluation.md) và [10-threshold-and-event-lifecycle-spec.md](./10-threshold-and-event-lifecycle-spec.md)).
 
-- Ở mỗi khung hình, hệ thống nhìn vào điểm chân (đáy khung bbox) của từng xe. Xe nào có điểm chân nằm
-  bên trong Poly Zone thì được cộng điểm theo mức độ chiếm mặt đường: - 1 xe máy / xe đạp = 1 điểm (WEIGHT\*2W=1.0) - 1 ô tô con = 3 điểm (WEIGHT_CAR=3.0) - 1 xe buýt / xe tải = 6 điểm (WEIGHT_HEAVY=6.0)
-- Cộng tất cả lại rồi làm mượt nhẹ trong ~3 giây để số không bị nhảy giật khi YOLO chớp tắt 1–2 frame → ra chỉ số W hiển thị dưới ô camera.
+---
 
-- **_Ví dụ_**: Trong Poly Zone đang có 3 ô tô + 6 xe máy → W = 3×3 + 6×1 = 15.0. Ý nghĩa các ngưỡng và cách chỉnh:
-  - `W_CLEAR=12.0`: Dưới mức này (và độ phủ cũng thấp) thì xem như đường vắng/thoáng, kết luận ngay CLEAR.
-  - `W_CONGESTED=15.0`: Từ mức này trở lên (tương đương ~5 ô tô con, hoặc 3 ô tô + 6 xe máy) là đủ đông để xét ùn tắc (nhưng vẫn phải kiểm tra xem xe có chạy chậm không).
-  - `W_GRIDLOCK=24.0`: Mật độ rất cao (tương đương ~8 ô tô con, hoặc 4 ô tô + 12 xe máy) để đủ điều kiện xét kẹt cứng.
-  - `W_RESCUE=18.0`: Mức mật độ tối thiểu dùng cho nhánh cứu nguy (Macro Rescue) khi xe xếp kín làm Tracker bị đứt ID.
+### 1. Quy ước Vùng `Poly Zone` (`18 – 22m`) & Mở rộng Vùng Tính Độ Phủ (`FLOW_ZONE_EXTEND_RATIO = 0.20`)
 
-> Mẹo chỉnh W\*\* theo từng camera: Vì W là tổng điểm tuyệt đối trong Poly Zone (không chia cho diện tích), nên Poly Zone vẽ càng rộng thì W càng cao. Cách chỉnh chuẩn nhất là mở video lúc đường thoáng, lúc hơi ùn, lúc kẹt cứng → nhìn con số W: xx.z hiện ngay dưới ô camera rồi đặt W_CLEAR / W_CONGESTED / W_GRIDLOCK bám theo con số thực tế đó.
+1. **Cách vẽ `Poly Zone` trên giao diện:**
+   - Vẽ đa giác bao phủ các làn đường theo chiều xe chạy với độ dài khoảng **`3 vạch sơn + 2–3 khoảng trống`** (tương đương **`18 – 22 mét`** thực tế).
+2. **Tách 2 vùng đo tự động bên trong AI:**
+   - **Vùng `zone_px` (Poly Zone gốc bạn vẽ):** Dùng để đo thời gian xe đi xuyên qua vùng (`T50`), thời gian xe bị giữ chân trong vùng (`D85`), và lá chắn che khuất xe buýt (`OcclusionShield`).
+   - **Vùng `flow_zone_px` (Mở rộng dọc trục đường `+20%` ở cả cạnh trên và cạnh dưới — `FLOW_ZONE_EXTEND_RATIO=0.20`):** Dùng để đo **Độ phủ mặt đường (`O_vis`)** và **Tốc độ dòng chảy (`Flow`)**, đồng thời làm khung cắt `ROI` cho YOLO để quan sát được ngữ cảnh đầy đủ hơn ở cả đầu vào và đầu ra của vùng.
 
-### 2. Nhóm O\_\* (O_CLEAR, O_CONGESTED, O_GRIDLOCK, O_MACRO_STALL, O_RESCUE) — Độ phủ mặt đường
+---
 
-O_vis được tính từ cái gì?
+### 2. Vai Trò Mới Của Trọng Số Xe (`WEIGHT_*` & `W_SANITY_MIN`) — Không Còn Dùng `W` Làm Ngưỡng Chặn Cứng
 
-- Hệ thống lấy phần diện tích xe do MOG2 (vật thể nổi bật trên nền đường) gộp với khung bbox của YOLO, rồi tính xem phần đó che kín bao nhiêu phần trăm diện tích Poly Zone.
-- Trên giao diện hiển thị là Phủ: nm%, còn trong .env viết dạng 0..1 (ví dụ 0.35 = 35%).
-- Khác với W, O_vis đã tự chia cho diện tích Poly Zone, nên ít bị lệch hơn khi bạn vẽ zone to hay nhỏ.
+- **Tại sao bỏ bộ ngưỡng `W_CLEAR / W_CONGESTED / W_GRIDLOCK` và ẩn `W` khỏi thẻ Live View?**
+  - Vì `W` là tổng điểm tuyệt đối (phụ thuộc vào diện tích vùng vẽ to hay nhỏ) và khi lên môi trường Production (nơi số lượng BBox bắt được có thể thấp), `W` sẽ bị tụt thấp giả tạo. Trong khi đó, **Độ phủ `O_vis (%)`** đã tự chia cho diện tích vùng và kết hợp cả `MOG2 + BBox` nên ổn định hơn rất nhiều.
+- **Vậy giữ lại `WEIGHT_2W=1.0`, `WEIGHT_CAR=3.0`, `WEIGHT_HEAVY=6.0` để làm gì?**
+  1. **Làm Cổng Kiểm Chứng Có Xe Thật (`W_SANITY_MIN = 3.0`):** Chỉ cần trong vùng có tổng trọng số `>= 3.0` (tương đương **1 ô tô** hoặc **3 xe máy**) là xác nhận có phương tiện thật trên đường, giúp chặn báo giả vào ban đêm trời mưa khi đèn pha rọi xuống mặt đường ướt làm `MOG2` báo `O_vis` cao.
+  2. **Cộng Điểm Tự Tin (`state_conf` $\in [0.55 .. 0.98]$):** Khi trọng số phương tiện `W_total` và các chỉ số thời gian `T50 / D85` đồng thuận với `O_vis + Flow`, hệ thống cộng thưởng vào độ tự tin `state_conf` của trạng thái và sự kiện.
 
-Ý nghĩa từng ngưỡng:
+---
 
-- `O_CLEAR=0.35`: Nếu W < 12.0 và độ phủ < 35% → chốt ngay CLEAR (tránh trường hợp ban đêm có 1 chiếc xe đậu im 1 chỗ bị báo kẹt).
-- `O_CONGESTED=0.45`: Mặt đường bị che phủ >= 45% là đạt ngưỡng đông của CONGESTED (lưu ý: giữa W >= 15 và O_vis >= 45%, chỉ cần 1 trong 2 đạt là đủ điều kiện mật độ).
-- `O_GRIDLOCK=0.65`: Mặt đường bị che phủ >= 65% là đạt ngưỡng đông của `GRIDLOCKED`.
-- `O_MACRO_STALL=0.70`: Bình thường để chốt `GRIDLOCKED`, tốc độ dòng chảy phải gần như đứng im (V_flow <=1.0). Nhưng nếu độ phủ đã lên tới >= 70% (rất kín đường), hệ thống vẫn cho phép chốt `GRIDLOCKED` dù chỉ số Flow còn dao động nhẹ.
-- `O_RESCUE=0.75`: Khi mặt đường kín đặc >= 75%, W >= 18 và dòng chảy đứng im (V_flow <= 1.0), hệ thống bỏ qua T50/D85 và chốt thẳng `GRIDLOCKE`D` (cứu nguy trường hợp kẹt quá đặc làm ByteTrack mất dấu xe).
+### 3. Nhóm Độ Phủ Mặt Đường `O_*` (`O_CLEAR`, `O_CONGESTED`, `O_GRIDLOCK`) — Trụ Cột Số 1
 
-### 3. Nhóm CONGESTED*T50*_ và CONGESTED*D85*_ — Thời gian đi qua và thời gian bị giữ chân
+`O_vis` được tính từ phần diện tích xe do `MOG2` (vật thể nổi trên nền đường, đã bỏ bóng râm `127`) gộp với khung `BBox` của YOLO, chia cho diện tích vùng `flow_zone_px`. Hiển thị trên UI dạng `Phủ: xx%`, cấu hình trong `.env` dạng `0..1`:
 
-Chỉ đông xe (W hoặc O_vis cao) chưa chắc là tắc — nếu dòng xe vẫn chạy nhanh thì vẫn là CLEAR. Vì vậy hệ
-thống phải đo thêm tốc độ thoát xe bằng 2 chỉ số thời gian (tính bằng giây):
+- **`O_CLEAR = 0.40` (`< 40%`):**
+  - Mặt đường bị chiếm chỗ dưới `40%` (và `Flow > 10 px/s`) $\longrightarrow$ Đường vắng/thoáng, chốt ngay **`CLEAR`**.
+  - Khi **`40% <= O_vis < 70%`**: Đường đông xe vừa phải; nếu dòng chảy lưu thông trung bình (`10 <= Flow <= 35 px/s`) và thời gian `T50 / D85` nằm trong ngưỡng thoát nhanh thì vẫn là **`CLEAR`**.
+- **`O_CONGESTED = 0.70` (`70% <= O_vis < 85%`):**
+  - Mặt đường bị lấp đầy từ `70%` đến dưới `85%`, mật độ phương tiện rất cao $\longrightarrow$ Đạt điều kiện độ phủ để xét **`CONGESTED` (`Đường ùn tắc`)**.
+- **`O_GRIDLOCK = 0.85` (`O_vis >= 85%`):**
+  - Mặt đường gần như kín đặc hoàn toàn (`>= 85%`, phần còn lại chỉ là khe hở nhỏ giữa các xe) $\longrightarrow$ Đạt điều kiện độ phủ để xét **`GRIDLOCKED` (`Kẹt xe / Tắc đường`)**.
 
-- `T50` (Thời gian đi xuyên qua zone): Đo những xe đã vào và thoát ra khỏi Poly Zone trong 15 giây gần nhất (cần tối thiểu 3 xe hoàn thành), lấy mức ở giữa (trung vị).
-  - `CONGESTED_T50_4W_S=3.0` / `CONGESTED_T50_2W_S=3.0`: Trung bình 1 xe 4 bánh (hoặc 2 bánh) mất hơn 3 giây mới đi hết đoạn Poly Zone.
-- `D85` (Thời gian xe đang nằm kẹt bên trong zone): Nhìn những xe vẫn đang kẹt trong zone chưa thoát ra được (nằm trong zone từ 1.5s trở lên, cần tối thiểu 2 xe), lấy mốc 85% (nhóm xe bị kẹt lâu nhất).
-  - `CONGESTED_D85_4W_S=5.0` / `CONGESTED_D85_2W_S=4.5`: Có nhóm ô tô đang bị giữ chân trong zone hơn 5 giây (hoặc xe máy hơn 4.5 giây) chưa ra được.
+---
 
-_(Ở nhánh `CONGESTED`, chỉ cần 1 trong 4 ngưỡng `T50/D85` này vượt mức — hoặc Flow nằm trong khoảng chậm `1.0 < Flow < 6.0` khi `Phủ >= 45%` — là hệ thống kết luận `CONGESTED`.)_
+### 4. Nhóm Tốc Độ Dòng Chảy `Flow` (`V_CLEAR_MIN`, `V_CONGESTED_MAX`, `V_GRIDLOCK_MAX`, `V_STALL`) — Trụ Cột Số 2
 
-> Mẹo chỉnh T50 / D85 theo độ dài Poly Zone:
->
-> - Nếu bạn vẽ Poly Zone dài (đoạn đường 40–50m), xe chạy bình thường cũng có thể mất 3–4 giây mới đi hết → nên tăng `CONGESTED_T50_*` lên (ví dụ 4.5–6.0) để tránh báo nhầm lúc đường thoáng.
-> - Nếu bạn vẽ Poly Zone ngắn (chỉ khoanh đúng cổ chai 15–20m), xe chạy qua chỉ mất 1–2 giây → giữ 3.0s hoặc giảm nhẹ sẽ bắt ùn tắc nhạy hơn.
+Đo tốc độ dịch chuyển trung bình (`px/s` trên khung chuẩn `320x180`) của đám đông phương tiện trong vùng:
+- **Đường vắng / Lưu thông trung bình (`CLEAR`):**
+  - Khi `O_vis < 40%` và `Flow > 10 px/s` (`V_CLEAR_MIN = 10.0`).
+  - Hoặc khi đường đông (`40% <= O_vis < 70%`), `10 <= Flow <= 35 px/s` và các xe đi qua vùng trong thời gian ngắn (`T50 / D85` đạt chuẩn `CLEAR`).
+- **Đường đông di chuyển chậm (`CONGESTED`):**
+  - `6 <= Flow <= 25 px/s` (`V_CONGESTED_MAX = 25.0`, hoặc `Flow <= 18.0 px/s` khi `T50/D85` bị `None` ở chế độ Macro-only).
+- **Đường kẹt cứng / Nhích từng chút một `< 5 km/h` (`GRIDLOCKED`):**
+  - Khi có `T50 / D85` xác nhận xe bị chôn chân lâu: cho phép `0 <= Flow <= 15 px/s` (`V_GRIDLOCK_MAX = 15.0`).
+  - Khi `T50 / D85` bị `None` (chỉ xét Macro `O_vis + Flow`): yêu cầu `Flow <= 6.0 px/s` (`V_STALL = 6.0`) để tránh báo nhầm dòng xe đang chạy chậm thành kẹt cứng.
+
+---
+
+### 5. Nhóm Thời Gian Vượt Vùng `T50` & Thời Gian Lưu Trú `D85` (Cho Vùng `18 – 22m`, `ZONE_WINDOW_S = 30.0s`)
+
+Vì vùng `Poly Zone` mới dài `18 – 22m`, cửa sổ trượt gom mẫu `T50` được đặt là **`ZONE_WINDOW_S = 30.0` giây**:
+
+| Trạng thái | Ngưỡng cho Xe 4 Bánh (`4W`: Ô tô, Buýt, Tải) | Ngưỡng cho Xe 2 Bánh (`2W`: Xe máy) | Giải thích Thực tế (Vùng `18 – 22m`) |
+| :--- | :--- | :--- | :--- |
+| **`CLEAR`**<br>*(Lưu thông tốt)* | • `T50_4W <= 5.5s`<br>• `D85_4W <= 6.5s` | • `T50_2W <= 4.5s`<br>• `D85_2W <= 5.0s` | Dù đường đông (`40% <= O_vis < 70%`) nhưng xe đi vào và thoát ra khỏi đoạn `18–22m` chỉ mất `4 – 6 giây`. |
+| **`CONGESTED`**<br>*(Ùn tắc, xe chạy chậm)* | • `5.5s < T50_4W <= 16.0s`<br>• `6.5s < D85_4W <= 20.0s`<br>*(Cấu hình: `CONGESTED_T50_4W_S=5.5`, `CONGESTED_D85_4W_S=6.5`)* | • `4.5s < T50_2W <= 13.5s`<br>• `5.0s < D85_2W <= 17.0s`<br>*(Cấu hình: `CONGESTED_T50_2W_S=4.5`, `CONGESTED_D85_2W_S=5.0`)* | Mặt đường rất đông (`O_vis >= 70%`), xe vẫn di chuyển nhưng thoát chậm, mất từ `6 – 19 giây` trong vùng. |
+| **`GRIDLOCKED`**<br>*(Kẹt cứng `< 5 km/h`)* | • **`T50_4W > 16.0s`** (`GRIDLOCK_T50_4W_S=16.0`)<br>• **`D85_4W > 20.0s`** (`GRIDLOCK_D85_4W_S=20.0`) | • **`T50_2W > 13.5s`** (`GRIDLOCK_T50_2W_S=13.5`)<br>• **`D85_2W > 17.0s`** (`GRIDLOCK_D85_2W_S=17.0`) | Độ phủ `>= 85%`, xe đứng yên hoặc nhích từng chút một khiến thời gian nằm trong vùng vượt quá `16 – 20 giây`. |
+
+---
+
+### 6. Quy Trình Xác Nhận & Bắn Thông Báo Sự Kiện (`3 Phút → +2 Phút (5p) → Mỗi +15 Phút` & Chuyển Trạng Thái)
+
+1. **Bộ đếm Đèn đỏ `90 giây` (`RED_LIGHT_HOLD_S = 90.0`):**
+   - Với camera tích chọn `Có đèn tín hiệu (has_traffic_light = true)`, hệ thống hiểu `90 giây` dừng chờ đầu tiên là nhịp đèn đỏ bình thường.
+2. **Xác nhận Sự kiện Ban đầu (`CONFIRM_STATE_S = 180.0` = `3 phút`):**
+   - Tình trạng `CONGESTED` hoặc `GRIDLOCKED` phải diễn ra liên tục trong vòng **3 phút (`180s`)** mới xác nhận tự tin và **bắn bản tin Sự kiện lần 1 (`CONFIRMED_3M`)**.
+3. **Nhắc lại sau `+2 phút` (Tổng `5 phút` — `FOLLOWUP_AFTER_CONFIRM_S = 120.0`):**
+   - Nếu sau mốc 3 phút, tình trạng ùn tắc/kẹt xe kéo dài thêm **2 phút nữa (tổng 5 phút = `300s`)**, hệ thống **bắn thêm 1 bản tin nhắc (`FOLLOWUP_5M`)**.
+4. **Nhắc lại định kỳ mỗi `+15 phút` (`PERIODIC_REMINDER_S = 900.0`):**
+   - Sau mốc 5 phút, cứ mỗi **15 phút (`900s` — tại các mốc `20p, 35p, 50p...`)** mà sự kiện vẫn chưa kết thúc, hệ thống **bắn tiếp 1 bản tin thông báo (`PERIODIC_15M`)** để người giám sát biết tuyến đường vẫn đang ùn tắc.
+5. **Bắn Ngay Khi Xác Nhận Chuyển Trạng Thái (`Transition Alert` sau mốc 3 phút):**
+   - Từ sau phút thứ 3 (khi tuyến đường đã được xác nhận là đang ùn tắc/kẹt xe), nếu tuyến đường chuyển sang trạng thái khác (`CLEAR` hoặc `GRIDLOCKED`) và **giữ ổn định trạng thái mới đó đủ 3 phút (`180s`)**, hệ thống **lập tức bắn ngay 1 bản tin Chuyển trạng thái** (`TRANSITION` hoặc `RECOVERED_CLEAR`) mà không cần chờ bộ đếm 2p/15p cũ!
+   - *(Khi bật `DEMO_MODE=1` để test nhanh: các mốc `180s / +120s / +900s` tự động rút xuống còn **`30s / +20s / +90s`**).*

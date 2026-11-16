@@ -32,10 +32,10 @@ poc/frontend/
 │ │  video + canvas     │ │                    │        │ │ cam1 17:30 │ │
 │ │           [KẸT XE]◢ │ │                    │        │ └────────────┘ │
 │ ├────────────────────┤ │                    │        │ ...            │
-│ │ W 30 | 2B 18 | 4B 4 │ │                    │        │                │
-│ │ T50 4B 8.4s 2B 4.1s │ │                    │        │                │
-│ │ D85 4B 14s  2B 5.0s │ │                    │        │                │
-│ │ Phủ 72% Flow 0.3    │ │                    │        │                │
+│ │ Phủ 72% | Flow 14  │ │                    │        │                │
+│ │ 2B 18 | 4B 4 (92%) │ │                    │        │                │
+│ │ T50 4B 8.4s 2B 4.1s│ │                    │        │                │
+│ │ D85 4B 14s  2B 5.0s│ │                    │        │                │
 │ └────────────────────┘ └────────────────────┘        │                │
 └──────────────────────────────────────────────────────┴────────────────┘
 ```
@@ -112,7 +112,7 @@ Cập nhật DOM badge + metrics **khi nhận gói WS** (không phải mỗi fra
 
 ## 8. Bước F6 — `zone-editor.js`: vẽ Poly Zone trực tiếp
 Luồng thao tác:
-1. Bấm **✏️** → `active=true`, `canvas.style.pointerEvents='auto'`, card thêm viền xanh dương, hiện thanh nhỏ: `[↶ Hoàn tác] [🗑 Xóa] [💾 Lưu] [✕ Hủy]` + hướng dẫn "Click các điểm bao đoạn đường dài ~2 vạch sơn + 2 khoảng trống (12–16 m), tối thiểu 3 điểm".
+1. Bấm **✏️** → `active=true`, `canvas.style.pointerEvents='auto'`, card thêm viền xanh dương, hiện thanh nhỏ: `[↶ Hoàn tác] [🗑 Xóa] [💾 Lưu] [✕ Hủy]` + hướng dẫn "Click các điểm bao đoạn đường dài ~3 vạch sơn + 2–3 khoảng trống (18–22 m), tối thiểu 3 điểm".
 2. Để dễ nhìn khi vẽ: đặt ảnh nền tĩnh `snapshot.jpg?t=now` lên một `<img>` tạm phía trên video (tránh xe chạy gây rối mắt); xóa khi kết thúc.
 3. `click`: `points.push({x: +(e.offsetX/w).toFixed(4), y: +(e.offsetY/h).toFixed(4)})`; vẽ đỉnh + đường nối + đường nét đứt về điểm đầu.
 4. **Lưu**: `points.length >= 3` → `api.saveZone(id, points)` → cập nhật `card.cam.zone` → thoát chế độ. **Xóa** → lưu `[]`.
@@ -125,7 +125,7 @@ Nút **📷**: mở `/api/cameras/{id}/snapshot.jpg` trong tab mới (tải ản
 Form: Tên, RTSP URL, checkbox "Có đèn tín hiệu", checkbox "Bật". Nút Lưu → `addCamera`/`updateCamera`; nút Xóa (confirm) → `deleteCamera`. Sau khi lưu: tải lại danh sách camera và dựng lại card (iframe cần reload vì MediaMTX restart — `setTimeout(reloadIframe, 3000)`).
 
 ## 10. Bước F8 — `events-panel.js`
-- Mỗi thẻ: thumbnail `snapshot_url`, badge state, tên camera, giờ `HH:mm:ss`, "kéo dài Xs", 1 dòng chỉ số chính (`T50 4B`, `D85 4B`, `Phủ`).
+- Mỗi thẻ: thumbnail `snapshot_url`, badge `state` + nhãn `event_stage` (`CONFIRMED_3M: "Xác nhận 3p"`, `FOLLOWUP_5M: "Nhắc 5p"`, `PERIODIC_15M: "Định kỳ +15p"`, `TRANSITION: "Chuyển mức"`, `RECOVERED_CLEAR: "Đã thông thoáng"`), tên camera, giờ `HH:mm:ss`, "kéo dài Xs", độ tự tin `Conf %`, 1 dòng chỉ số chính (`Phủ`, `Flow`, `D85 4B`).
 - Click thumbnail → modal ảnh lớn.
 - Sự kiện mới: highlight 3 s + phát âm thanh ngắn (`new Audio('data:audio/wav;base64,...')` hoặc `AudioContext` beep 0.2 s; bật/tắt bằng nút 🔔 ở header vì trình duyệt chặn autoplay cho tới khi người dùng click).
 - Đồng thời viền card camera tương ứng nhấp nháy màu state 5 s.

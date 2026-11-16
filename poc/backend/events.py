@@ -53,7 +53,9 @@ class EventStore:
             b_color = (248, 189, 56) if det.get("group") == "2W" else (250, 139, 167)
             cv2.rectangle(img, (x1, y1), (x2, y2), b_color, 2)
 
-        label = f"{cam.name if cam else cam_id} | {state} ({partial.get('duration_s', 0)}s)"
+        stage = partial.get("event_stage", "CONFIRMED_3M")
+        confidence = partial.get("confidence")
+        label = f"{cam.name if cam else cam_id} | {state} [{stage}] ({partial.get('duration_s', 0)}s)"
         cv2.rectangle(img, (12, 12), (min(w - 12, 24 + len(label) * 11), 48), (0, 0, 0), -1)
         cv2.putText(img, label, (20, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.65, color, 2)
 
@@ -65,6 +67,8 @@ class EventStore:
             "camera_id": cam_id,
             "camera_name": cam.name if cam else cam_id,
             "state": state,
+            "event_stage": stage,
+            "confidence": confidence,
             "ts": ts,
             "duration_s": partial.get("duration_s", 0),
             "snapshot_url": f"/snapshots/{evt_id}.jpg",
