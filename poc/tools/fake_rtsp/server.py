@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import os
 import shutil
 import signal
@@ -39,6 +40,15 @@ def _stop_procs(procs: list[subprocess.Popen]) -> None:
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser(description="Run fake RTSP streams from recorded MP4 files.")
+    ap.add_argument(
+        "--with-backend",
+        action="store_true",
+        help="Also launch the PoC FastAPI backend (uvicorn) in the same terminal.",
+    )
+    ap.add_argument("--port", default=os.getenv("PORT", "28080"), help="Backend HTTP port")
+    args = ap.parse_args()
+
     if shutil.which("ffmpeg") is None:
         print("[ERROR] ffmpeg chua duoc cai dat. Cai bang: sudo apt-get update && sudo apt-get install -y ffmpeg", file=sys.stderr)
         return 1
@@ -114,11 +124,36 @@ def main() -> int:
         else:
             print("[WARN] Thieu video Hoang Van Thu, bo qua /hvt")
 
+        backend_proc: subprocess.Popen | None = None
+        if args.with_backend:
+            time.sleep(1.0)
+            backend_dir = POC_DIR / "backend"
+            print(f"[fake_rtsp] Starting PoC backend on 0.0.0.0:{args.port}...")
+            backend_proc = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "uvicorn",
+                    "main:app",
+                    "--host",
+                    "0.0.0.0",
+                    "--port",
+                    str(args.port),
+                    "--timeout-graceful-shutdown",
+                    "3",
+                ],
+                cwd=str(backend_dir),
+            )
+            procs.append(backend_proc)
+
         print("[fake_rtsp] Streams are live. Press Ctrl+C to stop cleanly.")
         while not stopping:
             if mtx.poll() is not None:
                 print("[ERROR] MediaMTX da dung dot ngot.", file=sys.stderr)
                 return 1
+            if backend_proc is not None and backend_proc.poll() is not None:
+                print(f"[fake_rtsp] Backend exited with code {backend_proc.returncode}.")
+                return int(backend_proc.returncode or 0)
             time.sleep(0.5)
     finally:
         print("\n[fake_rtsp] Stopping MediaMTX and FFmpeg...")

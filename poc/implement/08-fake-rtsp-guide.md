@@ -55,25 +55,21 @@ cp poc/backend/data/cameras.json poc/backend/data/cameras.real.bak.json
 
 ---
 
-## Bước 4: Khởi chạy 2 Terminal trên Server (bằng `uv run`, Ctrl+C dừng sạch)
+## Bước 4: Khởi chạy bằng 1 lệnh duy nhất (trên 1 Terminal, Ctrl+C tắt sạch)
 
-### Terminal 1 — Chạy luồng RTSP giả lập (từ thư mục gốc repo)
+Từ thư mục gốc repo, chạy:
 ```bash
-uv run --project poc/backend python poc/tools/fake_rtsp/server.py
+uv run --project poc/backend python poc/tools/fake_rtsp/server.py --with-backend
 ```
-Khi chạy thành công, script sẽ mở MediaMTX phụ tại port `28555` và phát liên tục (loop vô hạn) 2 luồng:
-- **Số 8 Phan Đình Giót:** `rtsp://127.0.0.1:28555/pdg`
-- **Trạm xe buýt 247 Hoàng Văn Thụ** (tự động nối `clip.mp4` + `clip_2.mp4`): `rtsp://127.0.0.1:28555/hvt`
+Lệnh này sẽ tự động chạy theo đúng thứ tự:
+1. Mở MediaMTX phụ tại `:28555` và phát lặp vô hạn 2 luồng:
+   - **Số 8 Phan Đình Giót:** `rtsp://127.0.0.1:28555/pdg`
+   - **Trạm xe buýt 247 Hoàng Văn Thụ** (tự động nối `clip.mp4` + `clip_2.mp4`): `rtsp://127.0.0.1:28555/hvt`
+2. Tự động bật luôn **PoC Backend (`uvicorn`)** tại cổng `28080`.
 
-Khi muốn dừng, nhấn `Ctrl+C` — toàn bộ `ffmpeg` và `MediaMTX` phụ sẽ tự động tắt sạch, không sót tiến trình nền.
+Khi muốn dừng, chỉ cần nhấn **`Ctrl+C` 1 lần** — hệ thống sẽ tắt sạch lần lượt Backend, các tiến trình `ffmpeg` và `MediaMTX` phụ.
 
-*(Có thể kiểm tra nhanh bằng `ffprobe -rtsp_transport tcp -v error -show_streams rtsp://127.0.0.1:28555/pdg`)*
-
-### Terminal 2 — Chạy PoC Server chính
-```bash
-cd poc/backend
-uv run uvicorn main:app --host 0.0.0.0 --port 28080 --timeout-graceful-shutdown 3
-```
+*(Nếu muốn tách 2 terminal riêng, bỏ cờ `--with-backend` và tự chạy `uv run uvicorn main:app --host 0.0.0.0 --port 28080 --timeout-graceful-shutdown 3` trong `poc/backend/`).*
 *(Đừng quên kiểm tra `poc/.env` đã cập nhật các ngưỡng mới từ `poc/.env.example` nếu bạn muốn test bộ ngưỡng mới).*
 
 ---
