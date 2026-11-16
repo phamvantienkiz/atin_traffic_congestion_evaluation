@@ -1,6 +1,6 @@
 # Hướng dẫn Test bằng Video Record giả lập RTSP (trên Server)
 
-Tài liệu này hướng dẫn từng bước cách phát 3 video record trong `record/` thành **2 luồng RTSP giả lập** để test toàn bộ hệ thống PoC giống hệt như camera thật, **không sửa bất kỳ dòng code nào của backend/AI/RTSP ingestion**.
+Tài liệu này hướng dẫn từng bước cách phát 3 video record trong `record/` thành **2 luồng RTSP giả lập** bằng lệnh trực tiếp (không cần `chmod` hay chạy file `.sh`), **không sửa bất kỳ dòng code nào của backend/AI/RTSP ingestion**.
 
 ---
 
@@ -14,7 +14,7 @@ MediaMTX phụ (:28555)  ──▶  rtsp://127.0.0.1:28555/pdg
                        ──▶  rtsp://127.0.0.1:28555/hvt
    │
    ▼  (Backend PoC đọc như camera RTSP thật)
-MediaMTX chính (:28554) ──▶ StreamReader + WebRTC + AI Engine (./poc/run.sh)
+MediaMTX chính (:28554) ──▶ StreamReader + WebRTC + AI Engine (uv run uvicorn ...)
 ```
 
 ---
@@ -34,20 +34,14 @@ MediaMTX chính (:28554) ──▶ StreamReader + WebRTC + AI Engine (./poc/run.
 
 ---
 
-## Bước 2: Kiểm tra `ffmpeg` và cấp quyền thực thi script
+## Bước 2: Kiểm tra `ffmpeg` trên Server
 
-Trên server, kiểm tra `ffmpeg` đã cài chưa:
 ```bash
 ffmpeg -version
 ```
 Nếu chưa có:
 ```bash
 sudo apt-get update && sudo apt-get install -y ffmpeg
-```
-
-Cấp quyền chạy cho script giả lập RTSP:
-```bash
-chmod +x poc/tools/fake_rtsp/run_fake_rtsp.sh
 ```
 
 ---
@@ -61,21 +55,24 @@ cp poc/backend/data/cameras.json poc/backend/data/cameras.real.bak.json
 
 ---
 
-## Bước 4: Khởi chạy 2 Terminal trên Server
+## Bước 4: Khởi chạy 2 Terminal trên Server (bằng `uv run`, Ctrl+C dừng sạch)
 
-### Terminal 1 — Chạy luồng RTSP giả lập
+### Terminal 1 — Chạy luồng RTSP giả lập (từ thư mục gốc repo)
 ```bash
-./poc/tools/fake_rtsp/run_fake_rtsp.sh
+uv run --project poc/backend python poc/tools/fake_rtsp/server.py
 ```
 Khi chạy thành công, script sẽ mở MediaMTX phụ tại port `28555` và phát liên tục (loop vô hạn) 2 luồng:
 - **Số 8 Phan Đình Giót:** `rtsp://127.0.0.1:28555/pdg`
 - **Trạm xe buýt 247 Hoàng Văn Thụ** (tự động nối `clip.mp4` + `clip_2.mp4`): `rtsp://127.0.0.1:28555/hvt`
 
+Khi muốn dừng, nhấn `Ctrl+C` — toàn bộ `ffmpeg` và `MediaMTX` phụ sẽ tự động tắt sạch, không sót tiến trình nền.
+
 *(Có thể kiểm tra nhanh bằng `ffprobe -rtsp_transport tcp -v error -show_streams rtsp://127.0.0.1:28555/pdg`)*
 
-### Terminal 2 — Chạy PoC Server chính (giữ nguyên như bình thường)
+### Terminal 2 — Chạy PoC Server chính
 ```bash
-./poc/run.sh
+cd poc/backend
+uv run uvicorn main:app --host 0.0.0.0 --port 28080 --timeout-graceful-shutdown 3
 ```
 *(Đừng quên kiểm tra `poc/.env` đã cập nhật các ngưỡng mới từ `poc/.env.example` nếu bạn muốn test bộ ngưỡng mới).*
 
@@ -104,7 +101,7 @@ Sau khi lưu:
    cp poc/backend/data/cameras.real.bak.json poc/backend/data/cameras.json
    ```
    *(Hoặc sửa lại RTSP URL trực tiếp trên Web UI).*
-3. Chỉ chạy lại `./poc/run.sh` (không cần chạy `run_fake_rtsp.sh`).
+3. Chỉ chạy lại Terminal 2 (`uv run uvicorn main:app --host 0.0.0.0 --port 28080 --timeout-graceful-shutdown 3`), không cần chạy `fake_rtsp/server.py`.
 
 ---
 
