@@ -66,6 +66,38 @@ def zone_axis_length(zone_px: np.ndarray | None) -> float:
     return float(math.hypot(float(bot_mid[0] - top_mid[0]), float(bot_mid[1] - top_mid[1])))
 
 
+def extend_zone_longitudinal(
+    zone_px: np.ndarray | None,
+    w: int,
+    h: int,
+    ratio: float = 0.20,
+) -> np.ndarray | None:
+    """Extend zone along its longitudinal road axis by `ratio` at both ends without widening."""
+    if zone_px is None or len(zone_px) < 3 or ratio <= 0.0:
+        return zone_px
+
+    pts = zone_px.astype(np.float32)
+    idx = np.argsort(pts[:, 1])
+    top_mid = pts[idx[:2]].mean(axis=0)
+    bot_mid = pts[idx[-2:]].mean(axis=0)
+
+    axis = bot_mid - top_mid
+    length = float(np.linalg.norm(axis))
+    if length < 1e-3:
+        return zone_px.copy()
+
+    unit = axis / length
+    mid = 0.5 * (top_mid + bot_mid)
+
+    # Scale only the longitudinal projection around `mid`; lateral width stays unchanged
+    proj = (pts - mid) @ unit
+    extended = pts + np.outer(proj * (2.0 * ratio), unit)
+    out = np.rint(extended).astype(np.int32)
+    out[:, 0] = np.clip(out[:, 0], 0, w - 1)
+    out[:, 1] = np.clip(out[:, 1], 0, h - 1)
+    return out
+
+
 def point_in_zone(zone_px: np.ndarray | None, pt: tuple[float, float]) -> bool:
     """Return True if pt is inside or on the boundary of zone_px (or True if no zone)."""
     if zone_px is None or len(zone_px) < 3:

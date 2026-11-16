@@ -16,7 +16,7 @@ from ai.core_pipeline.zone_time import ZoneTimeAnalyzer
 from ai.decision.classifier import classify
 from ai.decision.occlusion import OcclusionShield
 from ai.decision.state_machine import StateMachine
-from ai.geometry import point_in_zone, roi_from_zone, zone_to_px
+from ai.geometry import extend_zone_longitudinal, point_in_zone, roi_from_zone, zone_to_px
 from ai.ingestion.stream_reader import StreamReader
 
 
@@ -44,6 +44,7 @@ class CameraProcessor:
         self.sm = StateMachine(self.cfg, has_traffic_light=bool(cam.get("has_traffic_light", False)))
 
         self.zone_px: np.ndarray | None = None
+        self.flow_zone_px: np.ndarray | None = None
         self.roi: tuple[int, int, int, int] = (0, 0, self.cfg.frame_w, self.cfg.frame_h)
         self._last_seq: int = -1
         self._last_frame: np.ndarray | None = None
@@ -70,14 +71,20 @@ class CameraProcessor:
 
     def _set_zone_unlocked(self, zone: list[dict]) -> None:
         self.zone_px = zone_to_px(zone, self.cfg.frame_w, self.cfg.frame_h)
-        self.roi = roi_from_zone(
+        self.flow_zone_px = extend_zone_longitudinal(
             self.zone_px,
+            self.cfg.frame_w,
+            self.cfg.frame_h,
+            self.cfg.flow_zone_extend_ratio,
+        )
+        self.roi = roi_from_zone(
+            self.flow_zone_px,
             self.cfg.frame_w,
             self.cfg.frame_h,
             self.cfg.roi_padding,
         )
         self.zone_time.set_zone(self.zone_px)
-        self.flow_occ.set_zone(self.zone_px)
+        self.flow_occ.set_zone(self.flow_zone_px)
         self.occlusion.set_zone(self.zone_px)
 
     def latest_frame(self) -> np.ndarray | None:
@@ -110,7 +117,7 @@ class CameraProcessor:
             zm = self.zone_time.update(tracks, now)
 
             in_zone_boxes = [
-                t.xyxy for t in tracks if point_in_zone(self.zone_px, t.foot)
+                t.xyxy for t in tracks if point_in_zone(self.flow_zone_px, t.foot)
             ]
             bboxes_arr = (
                 np.stack(in_zone_boxes, axis=0)

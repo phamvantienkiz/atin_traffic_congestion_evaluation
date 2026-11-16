@@ -90,6 +90,7 @@ class AIConfig:
     # Auxiliary pipeline (MOG2 + Farneback on 320x180)
     aux_w: int = 320
     aux_h: int = 180
+    flow_zone_extend_ratio: float = _env_field("FLOW_ZONE_EXTEND_RATIO", 0.20, float)
     mog2_lr_normal: float = _env_field("MOG2_LR_NORMAL", 0.005, float)
     flow_noise_px: float = _env_field("FLOW_NOISE_PX", 0.8, float)
     v_stall: float = _env_field("V_STALL", 1.0, float)

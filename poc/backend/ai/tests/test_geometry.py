@@ -4,7 +4,14 @@ from __future__ import annotations
 
 import numpy as np
 
-from ai.geometry import point_in_zone, roi_from_zone, zone_axis_length, zone_mask, zone_to_px
+from ai.geometry import (
+    extend_zone_longitudinal,
+    point_in_zone,
+    roi_from_zone,
+    zone_axis_length,
+    zone_mask,
+    zone_to_px,
+)
 
 
 def test_zone_to_px_and_none() -> None:
@@ -57,3 +64,18 @@ def test_point_in_zone_and_mask() -> None:
     assert mask.shape == (300, 300)
     assert mask[150, 150] == 255
     assert mask[10, 10] == 0
+
+
+def test_extend_zone_longitudinal_preserves_width_and_extends_axis() -> None:
+    # Tilted road polygon (bottom-left to top-right)
+    zone = np.array([[200, 300], [300, 200], [400, 200], [300, 300]], dtype=np.int32)
+    ext = extend_zone_longitudinal(zone, 1280, 720, ratio=0.20)
+    assert ext is not None
+    assert ext.shape == (4, 2)
+    # Top edge moves further up-right (x increases, y decreases); bottom edge moves down-left
+    assert ext[1][1] < zone[1][1] and ext[1][0] > zone[1][0]
+    assert ext[0][1] > zone[0][1] and ext[0][0] < zone[0][0]
+    # Axis length increases by ~40% (+20% each end)
+    assert abs(zone_axis_length(ext) / zone_axis_length(zone) - 1.4) < 0.05
+    # Ratio 0 returns original zone
+    assert np.array_equal(extend_zone_longitudinal(zone, 1280, 720, ratio=0.0), zone)
