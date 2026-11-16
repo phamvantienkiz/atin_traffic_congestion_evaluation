@@ -91,13 +91,17 @@ Sau khi lưu:
 
 ## Bước 6: Cách chuyển ngược lại Camera RTSP thật khi có tín hiệu lại
 
-1. Dừng Terminal 2 (`Ctrl+C`) và Terminal 1 (`Ctrl+C`).
+1. Nhấn `Ctrl+C` để dừng lệnh `fake_rtsp/server.py --with-backend`.
 2. Khôi phục file backup camera thật:
    ```bash
    cp poc/backend/data/cameras.real.bak.json poc/backend/data/cameras.json
    ```
    *(Hoặc sửa lại RTSP URL trực tiếp trên Web UI).*
-3. Chỉ chạy lại Terminal 2 (`uv run uvicorn main:app --host 0.0.0.0 --port 28080 --timeout-graceful-shutdown 3`), không cần chạy `fake_rtsp/server.py`.
+3. Chạy lại mỗi PoC Backend (không cần chạy `fake_rtsp/server.py`):
+   ```bash
+   cd poc/backend
+   uv run uvicorn main:app --host 0.0.0.0 --port 28080 --timeout-graceful-shutdown 3
+   ```
 
 ---
 
