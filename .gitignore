@@ -126,5 +126,8 @@ poc/backend/data/cameras.json
 poc/backend/data/snapshots/
 poc/samples/
 poc/out/
+poc/records/*
+!poc/records/.gitkeep
 samples/
 out/
+record/

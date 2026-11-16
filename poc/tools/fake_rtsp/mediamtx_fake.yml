@@ -1,0 +1,13 @@
+# MediaMTX phụ chỉ dùng để giả lập RTSP từ video record (không xung đột port với MediaMTX chính)
+logLevel: info
+api: no
+rtsp: yes
+rtspAddress: :28555
+protocols: [tcp]
+rtmp: no
+hls: no
+srt: no
+webrtc: no
+
+paths:
+  all_others:
