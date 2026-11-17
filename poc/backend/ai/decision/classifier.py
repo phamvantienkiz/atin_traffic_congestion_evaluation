@@ -30,12 +30,12 @@ def classify(m: dict[str, float | int | None], cfg: AIConfig) -> tuple[str, floa
             (d2, cfg.congested_d85_2w_s),
         )
     )
-    time_congested = (
-        gt(t4, cfg.congested_t50_4w_s)
-        or gt(d4, cfg.congested_d85_4w_s)
-        or gt(t2, cfg.congested_t50_2w_s)
-        or gt(d2, cfg.congested_d85_2w_s)
+    has_t50_congested = gt(t4, cfg.congested_t50_4w_s) or gt(t2, cfg.congested_t50_2w_s)
+    has_d85_congested = (
+        (t4 is None and gt(d4, cfg.congested_d85_4w_s))
+        or (t2 is None and gt(d2, cfg.congested_d85_2w_s))
     )
+    time_congested = has_t50_congested or (has_d85_congested and v <= cfg.v_gridlock_max)
     time_gridlock = (
         gt(t4, cfg.gridlock_t50_4w_s)
         or gt(d4, cfg.gridlock_d85_4w_s)
@@ -46,6 +46,11 @@ def classify(m: dict[str, float | int | None], cfg: AIConfig) -> tuple[str, floa
     # 1. Empty / clear road or no real vehicles (blocks night rain headlight glare)
     if o < cfg.o_clear or not has_vehicles:
         conf = 0.85 + (0.10 if v > cfg.v_clear_min else 0.0)
+        return "CLEAR", round(min(0.98, conf), 2)
+
+    # 1b. High-flow override: dense traffic actively discharging is CLEAR, not congested
+    if v > cfg.v_congested_max:
+        conf = 0.84 + (0.12 if time_clear else 0.0)
         return "CLEAR", round(min(0.98, conf), 2)
 
     # 2. GRIDLOCKED: O_vis >= 85% and (Flow <= 15 with time_gridlock, or macro-only Flow <= 6)

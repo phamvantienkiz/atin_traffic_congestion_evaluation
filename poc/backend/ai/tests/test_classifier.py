@@ -74,13 +74,28 @@ def test_gridlocked_macro_only_when_no_time_metrics() -> None:
 
 
 def test_flow_overlap_resolved_by_t50() -> None:
-    # Flow=12.0 sits in overlap between CLEAR (10..35), CONGESTED (6..25), GRIDLOCKED (0..15)
+    # Flow=12.0 sits in overlap between CLEAR (10..35), CONGESTED (6..18), GRIDLOCKED (0..15)
     st_clear, _ = classify(_metrics(w_total=15.0, o_vis=0.55, v_flow=12.0, t50_4w=4.5), CFG)
     st_cong, _ = classify(_metrics(w_total=20.0, o_vis=0.75, v_flow=12.0, t50_4w=10.0), CFG)
     st_grid, _ = classify(_metrics(w_total=25.0, o_vis=0.88, v_flow=12.0, t50_4w=17.0), CFG)
     assert st_clear == "CLEAR"
     assert st_cong == "CONGESTED"
     assert st_grid == "GRIDLOCKED"
+
+
+def test_high_occupancy_with_fast_discharge_flow_is_clear() -> None:
+    # O_vis > 80% during rush hour, but flow > V_CONGESTED_MAX (18.0) -> CLEAR
+    m = _metrics(w_total=24.0, n_4w=4, n_2w=12, t50_2w=3.2, d85_4w=18.0, o_vis=0.86, v_flow=22.0)
+    st, conf = classify(m, CFG)
+    assert st == "CLEAR"
+    assert conf >= 0.84
+
+
+def test_single_d85_outlier_with_fast_t50_and_moderate_flow_is_clear() -> None:
+    # Fast T50_2W (3.0s) and moderate flow (16.5 > V_GRIDLOCK_MAX) should not be flagged CONGESTED by 1 slow D85_4W
+    m = _metrics(w_total=18.0, n_4w=2, n_2w=10, t50_2w=3.0, d85_4w=8.0, o_vis=0.78, v_flow=16.5)
+    st, _ = classify(m, CFG)
+    assert st == "CLEAR"
 
 
 def test_medium_occupancy_with_stalled_time_is_congested() -> None:

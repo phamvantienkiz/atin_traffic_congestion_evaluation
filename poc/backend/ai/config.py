@@ -95,8 +95,8 @@ class AIConfig:
     flow_noise_px: float = _env_field("FLOW_NOISE_PX", 0.8, float)
     v_stall: float = _env_field("V_STALL", 6.0, float)
     v_gridlock_max: float = _env_field("V_GRIDLOCK_MAX", 15.0, float)
-    v_congested_macro: float = _env_field("V_CONGESTED_MACRO", 18.0, float)
-    v_congested_max: float = _env_field("V_CONGESTED_MAX", 25.0, float)
+    v_congested_macro: float = _env_field("V_CONGESTED_MACRO", 14.0, float)
+    v_congested_max: float = _env_field("V_CONGESTED_MAX", 18.0, float)
     v_clear_min: float = _env_field("V_CLEAR_MIN", 10.0, float)
 
     # Classifier V2: O_vis + Flow + T50/D85 (W used as sanity gate & confidence bonus)
@@ -133,7 +133,7 @@ class AIConfig:
         "PERIODIC_REMINDER_S", 90.0 if DEMO_MODE else 900.0, float
     )
     persistence_tolerance_s: float = _env_field("PERSISTENCE_TOLERANCE_S", 5.0, float)
-    exit_clear_s: float = _env_field("EXIT_CLEAR_S", 15.0, float)
+    exit_clear_s: float = _env_field("EXIT_CLEAR_S", 10.0, float)
 
 
 CFG = AIConfig()

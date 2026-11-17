@@ -19,7 +19,7 @@ class FlowOccupancy:
             varThreshold=16,
             detectShadows=True,
         )
-        self.close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 7))
+        self.close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         self.prev_gray: np.ndarray | None = None
         self.zone_mask_small = np.full((cfg.aux_h, cfg.aux_w), 255, dtype=np.uint8)
         self.row_weights = self._build_row_weights(0, cfg.aux_h - 1)
