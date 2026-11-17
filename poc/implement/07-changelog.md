@@ -155,3 +155,15 @@ Khi đồng bộ ngược tài liệu trong `poc/implement/`, cần kiểm tra v
   - Hạ `varThreshold` của MOG2 xuống `16`, `MOG2_LR_NORMAL = 0.002`, xóa vòng lặp chết của `stalled_hint`.
   - Thay `MORPH_OPEN(3x3)` bằng **`MORPH_CLOSE` (kernel elip `9x7`)** trên mặt nạ gộp `fg | mask_yolo` để lấp khe hở nhỏ giữa các xe máy đi sát nhau.
   - Áp dụng **Trọng số Phối cảnh Tự động theo chiều dọc (`Perspective Row Weighting`: `2.2` ở đỉnh xa $\rightarrow$ `0.8` ở đáy gần)** để cân bằng diện tích phương tiện ở xa và gần trên mọi góc lắp camera, đảm bảo `O_vis` khớp hoàn toàn với bộ ngưỡng `40% / 70% / 85%`.
+
+---
+
+## 6. Tinh chỉnh chống báo giả ùn tắc khi `O_vis > 80%` nhưng dòng xe thoát nhanh (`af8f301`)
+
+| Hạng mục | Trước đây | Sau khi cập nhật | Lý do thay đổi |
+| :--- | :--- | :--- | :--- |
+| **`V_CONGESTED_MAX` / `V_CONGESTED_MACRO`** | `25.0` / `18.0 px/s` | **`18.0` / `14.0 px/s`** | Giờ cao điểm đông xe nhưng lưu thông `15–25 px/s` không còn bị xếp nhầm vào `CONGESTED` |
+| **High-flow override (`classifier.py`)** | Không có | **`v_flow > V_CONGESTED_MAX` (`18.0`) $\rightarrow$ ép `CLEAR`** | Đảm bảo luồng xe đang thoát nhanh luôn trả về `CLEAR` dù `O_vis >= 80%` |
+| **Điều kiện `time_congested` (`classifier.py`)** | `OR` 4 chỉ số `T50`/`D85` | **Ưu tiên `T50`; `D85` chỉ dùng khi nhóm thiếu `T50` & `v_flow <= 15.0`** | Tránh 1–2 xe rẽ/dừng lẻ tẻ làm `D85` vượt ngưỡng và kéo cả zone thành `CONGESTED` |
+| **`MORPH_CLOSE` kernel (`flow_occupancy.py`)** | Elip `(9, 7)` | **Elip `(5, 5)`** | Giảm hiện tượng thổi phồng `O_vis` trên luồng nhiều xe máy |
+| **`EXIT_CLEAR_S` (`config.py`)** | `15.0s` | **`10.0s`** | Thoát khỏi trạng thái `CONGESTED` về `CLEAR` nhanh hơn khi luồng xe thông trở lại |

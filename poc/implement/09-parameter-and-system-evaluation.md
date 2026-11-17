@@ -123,7 +123,7 @@ Khi triển khai trên Production (nơi số lượng BBox bắt được thấp
      $$\text{Frozen} = (V_{flow} < V_{stall}) \;\land\; \big(D_{85} > 5.0\text{s} \;\lor\; (O_{vis} \ge O_{congested} \land N_{vehicles} \ge 2)\big)$$
      *(Nhờ vậy, kể cả khi ByteTrack bị đứt ID không tính được `D85`, miễn là còn thấy $\ge 2$ BBox xe và `Flow` đứng im, nền `MOG2` vẫn được đóng băng bảo vệ 100%!).*
 2. **Điều kiện `CLEAR` (Thông thoáng):**
-   - `O_vis < O_CLEAR (0.40)` **HOẶC** (`40% <= O_vis < O_CONGESTED (0.70)` và `V_flow >= V_CLEAR_MIN (10.0 px/s)` kèm `T50_4W <= 5.5s, D85_4W <= 6.5s, T50_2W <= 4.5s, D85_2W <= 5.0s`) **HOẶC** dòng chảy lưu thông rất nhanh (`V_flow > V_CONGESTED_MAX (25.0 px/s)`).
+   - `O_vis < O_CLEAR (0.40)` **HOẶC** dòng chảy đang thoát nhanh (`V_flow > V_CONGESTED_MAX (18.0 px/s)`, kể cả khi `O_vis >= 80%`) **HOẶC** (`40% <= O_vis < O_CONGESTED (0.70)` và `V_flow >= V_CLEAR_MIN (10.0 px/s)` kèm `T50_4W <= 5.5s, D85_4W <= 6.5s, T50_2W <= 4.5s, D85_2W <= 5.0s`).
 3. **Điều kiện `GRIDLOCKED` (Kẹt xe / Tắc đường):**
    - **Độ phủ cao:** `O_vis >= O_GRIDLOCK (0.85)`
    - **VÀ Dòng chảy tê liệt:**
@@ -132,8 +132,8 @@ Khi triển khai trên Production (nơi số lượng BBox bắt được thấp
 4. **Điều kiện `CONGESTED` (Đường ùn tắc):**
    - **Độ phủ cao (`70% <= O_vis < 85%` hoặc `>= O_CONGESTED = 0.70`):**
    - **VÀ Dòng chảy suy giảm:**
-     - **Khi có `T50 / D85`:** `V_flow <= V_CONGESTED_MAX (25.0 px/s)` **VÀ** thời gian vượt mốc `CLEAR` (`T50_4W > 5.5s` hoặc `D85_4W > 6.5s` hoặc `T50_2W > 4.5s` hoặc `D85_2W > 5.0s`).
-     - **Khi `T50 / D85` bị `None` (Macro-only):** `V_flow <= 18.0 px/s` (kèm `W_total >= W_SANITY_MIN (3.0)`).
+     - **Khi có `T50 / D85`:** `V_flow <= V_CONGESTED_MAX (18.0 px/s)` **VÀ** (`T50_4W > 5.5s` hoặc `T50_2W > 4.5s`; hoặc dùng `D85` khi nhóm xe đó chưa có `T50` kèm `V_flow <= V_GRIDLOCK_MAX (15.0 px/s)`).
+     - **Khi `T50 / D85` bị `None` (Macro-only):** `V_flow <= 14.0 px/s` (kèm `W_total >= W_SANITY_MIN (3.0)`).
 5. **Tính Điểm Tự Tin (`state_conf` $\in [0.55 .. 0.98]$):**
    - Giữ lại trọng số phương tiện (`WEIGHT_2W=1.0, WEIGHT_CAR=3.0, WEIGHT_HEAVY=6.0`) và `T50, D85` để cộng thưởng độ tự tin `state_conf` khi các nguồn tín hiệu đồng thuận (xem chi tiết tại [10-threshold-and-event-lifecycle-spec.md](./10-threshold-and-event-lifecycle-spec.md)).
 

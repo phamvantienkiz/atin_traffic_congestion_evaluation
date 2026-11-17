@@ -42,10 +42,10 @@
 
 Đo tốc độ dịch chuyển trung bình (`px/s` trên khung chuẩn `320x180`) của đám đông phương tiện trong vùng:
 - **Đường vắng / Lưu thông trung bình (`CLEAR`):**
-  - Khi `O_vis < 40%` và `Flow > 10 px/s` (`V_CLEAR_MIN = 10.0`).
+  - Khi `O_vis < 40%` và `Flow > 10 px/s` (`V_CLEAR_MIN = 10.0`), hoặc khi `Flow > 18.0 px/s` (`V_CONGESTED_MAX`) — bất kể `O_vis` cao (luồng xe đang thoát nhanh).
   - Hoặc khi đường đông (`40% <= O_vis < 70%`), `10 <= Flow <= 35 px/s` và các xe đi qua vùng trong thời gian ngắn (`T50 / D85` đạt chuẩn `CLEAR`).
 - **Đường đông di chuyển chậm (`CONGESTED`):**
-  - `6 <= Flow <= 25 px/s` (`V_CONGESTED_MAX = 25.0`, hoặc `Flow <= 18.0 px/s` khi `T50/D85` bị `None` ở chế độ Macro-only).
+  - `6 <= Flow <= 18 px/s` (`V_CONGESTED_MAX = 18.0`, hoặc `Flow <= 14.0 px/s` khi `T50/D85` bị `None` ở chế độ Macro-only).
 - **Đường kẹt cứng / Nhích từng chút một `< 5 km/h` (`GRIDLOCKED`):**
   - Khi có `T50 / D85` xác nhận xe bị chôn chân lâu: cho phép `0 <= Flow <= 15 px/s` (`V_GRIDLOCK_MAX = 15.0`).
   - Khi `T50 / D85` bị `None` (chỉ xét Macro `O_vis + Flow`): yêu cầu `Flow <= 6.0 px/s` (`V_STALL = 6.0`) để tránh báo nhầm dòng xe đang chạy chậm thành kẹt cứng.

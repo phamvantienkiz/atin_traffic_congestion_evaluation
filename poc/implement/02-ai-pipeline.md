@@ -94,8 +94,8 @@ class AIConfig:
     flow_noise_px: float = 0.8        # px/frame trên ảnh 320x180
     v_stall: float = 6.0              # px/s (ngưỡng kẹt Macro-only khi thiếu T50/D85)
     v_gridlock_max: float = 15.0      # px/s (ngưỡng Flow tối đa cho GRIDLOCKED khi có T50/D85)
-    v_congested_macro: float = 18.0   # px/s (ngưỡng ùn tắc Macro-only khi thiếu T50/D85)
-    v_congested_max: float = 25.0     # px/s (ngưỡng Flow tối đa cho CONGESTED khi có T50/D85)
+    v_congested_macro: float = 14.0   # px/s (ngưỡng ùn tắc Macro-only khi thiếu T50/D85)
+    v_congested_max: float = 18.0     # px/s (ngưỡng Flow tối đa cho CONGESTED khi có T50/D85)
     v_clear_min: float = 10.0         # px/s (ngưỡng Flow lưu thông bình thường)
 
     # Luật trạng thái V2 (Bỏ ngưỡng cứng W_*, dùng O_vis + Flow + T50/D85; W làm Sanity Gate & Confidence)
@@ -130,7 +130,7 @@ class AIConfig:
     followup_after_confirm_s: float = 20.0 if DEMO_MODE else 120.0
     periodic_reminder_s: float = 90.0 if DEMO_MODE else 900.0
     persistence_tolerance_s: float = 5.0
-    exit_clear_s: float = 15.0
+    exit_clear_s: float = 10.0
 
 CFG = AIConfig()
 ```
@@ -312,7 +312,7 @@ class ZoneTimeAnalyzer:
 class FlowOccupancy:
     def __init__(self, cfg):
         self.mog2 = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=16, detectShadows=True)
-        self.close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 7))
+        self.close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         self.prev_gray = None
         self.zone_mask_small = None      # 320x180 (từ flow_zone_px đã mở rộng Rail-Aligned +20%)
         self.row_weights = None          # (180, 1) float32: trọng số phối cảnh tự động từ y_min (2.2) -> y_max (0.8)
@@ -329,7 +329,7 @@ class FlowOccupancy:
         fg = self.mog2.apply(small, learningRate=lr)
         fg = np.where(fg == 255, 255, 0).astype(np.uint8)         # bỏ bóng (127)
         # Vẽ det.xyxy (scale 0.25) đặc 255 vào mask_yolo; gộp raw_union = fg | mask_yolo
-        # Áp dụng MORPH_CLOSE (elip 9x7) lấp khe hở nhỏ giữa các xe máy đi sát nhau -> cắt theo zone_mask_small
+        # Áp dụng MORPH_CLOSE (elip 5x5) lấp khe hở nhỏ giữa các xe máy đi sát nhau -> cắt theo zone_mask_small
         # Tính o_vis có trọng số phối cảnh: sum((occupied > 0) * row_weights) / sum((zone_mask_small > 0) * row_weights)
         # Optical flow
         if prev_gray is not None:
@@ -378,8 +378,12 @@ def classify(m: dict, cfg) -> tuple[str, float]:
         for x, th in ((t4, cfg.congested_t50_4w_s), (d4, cfg.congested_d85_4w_s),
                       (t2, cfg.congested_t50_2w_s), (d2, cfg.congested_d85_2w_s))
     )
-    time_congested = (gt(t4, cfg.congested_t50_4w_s) or gt(d4, cfg.congested_d85_4w_s)
-                      or gt(t2, cfg.congested_t50_2w_s) or gt(d2, cfg.congested_d85_2w_s))
+    has_t50_congested = gt(t4, cfg.congested_t50_4w_s) or gt(t2, cfg.congested_t50_2w_s)
+    has_d85_congested = (
+        (t4 is None and gt(d4, cfg.congested_d85_4w_s))
+        or (t2 is None and gt(d2, cfg.congested_d85_2w_s))
+    )
+    time_congested = has_t50_congested or (has_d85_congested and v <= cfg.v_gridlock_max)
     time_gridlock = (gt(t4, cfg.gridlock_t50_4w_s) or gt(d4, cfg.gridlock_d85_4w_s)
                      or gt(t2, cfg.gridlock_t50_2w_s) or gt(d2, cfg.gridlock_d85_2w_s))
 
@@ -388,13 +392,18 @@ def classify(m: dict, cfg) -> tuple[str, float]:
         conf = 0.85 + (0.10 if v > cfg.v_clear_min else 0.0)
         return "CLEAR", round(min(0.98, conf), 2)
 
+    # 1b. High-flow override: mật độ cao nhưng dòng xe đang thoát nhanh -> CLEAR
+    if v > cfg.v_congested_max:
+        conf = 0.84 + (0.12 if time_clear else 0.0)
+        return "CLEAR", round(min(0.98, conf), 2)
+
     # 2. GRIDLOCKED: O_vis >= 85% và (Flow <= 15 px/s kèm T50/D85 vượt ngưỡng kẹt HOẶC Macro-only Flow <= 6 px/s)
     if o >= cfg.o_gridlock:
         if (time_gridlock and v <= cfg.v_gridlock_max) or (not has_time and v <= cfg.v_stall):
             conf = 0.75 + (0.13 if time_gridlock else 0.0) + (0.10 if w >= 24.0 else 0.0)
             return "GRIDLOCKED", round(min(0.98, conf), 2)
 
-    # 3. CONGESTED: O_vis >= 70% và (Flow <= 25 px/s kèm T50/D85 vượt ngưỡng CLEAR HOẶC Macro-only Flow <= 18 px/s)
+    # 3. CONGESTED: O_vis >= 70% và (Flow <= 18 px/s kèm T50 chậm (hoặc D85 khi thiếu T50 & Flow <= 15) HOẶC Macro-only Flow <= 14 px/s)
     #    (Hoặc khi 40% <= O_vis < 70% nhưng cả T50/D85 đều báo kẹt nặng time_gridlock)
     if o >= cfg.o_congested:
         if (time_congested and v <= cfg.v_congested_max) or (not has_time and v <= cfg.v_congested_macro):

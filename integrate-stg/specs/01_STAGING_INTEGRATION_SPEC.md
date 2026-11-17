@@ -130,8 +130,8 @@ flowchart LR
 - `poc/backend/ai` xử lý nội bộ trên độ phân giải chuẩn `1280x720` (`FRAME_W = 1280`, `FRAME_H = 720`).
 - Các tham số V2 đã ổn định trên PoC giữ nguyên:
   - `MOG2_LR_NORMAL = 0.002`, `O_CLEAR = 0.40`, `O_CONGESTED = 0.70`, `O_GRIDLOCK = 0.85`.
-  - `FlowOccupancy` với perspective row weighting (`2.2` tại `y_min` $\rightarrow$ `0.8` tại `y_max`) và `MORPH_CLOSE (9, 7)`.
-  - `OcclusionShield` (`40s` max hold) và `StateMachine` (`5s` smooth, `15s` exit hysteresis, `3m` initial confirm, `+2m` escalate, `+15m` ongoing reminder).
+  - `FlowOccupancy` với perspective row weighting (`2.2` tại `y_min` $\rightarrow$ `0.8` tại `y_max`) và `MORPH_CLOSE (5, 5)`.
+  - `OcclusionShield` (`40s` max hold) và `StateMachine` (`5s` smooth, `10s` exit hysteresis, `3m` initial confirm, `+2m` escalate, `+15m` ongoing reminder).
 - **Quy đổi BBox ra hệ tọa độ `0..1` cho Web VMS:**
   - `CameraProcessor` trả về `Det` trong tọa độ pixel `1280x720` (`xyxy`).
   - Khi đóng gói gửi MQTT `smart_vms/ai/bbox/camera_junction`, chia tọa độ cho `(1280.0, 720.0)` và clip về `[0.0, 1.0]`.

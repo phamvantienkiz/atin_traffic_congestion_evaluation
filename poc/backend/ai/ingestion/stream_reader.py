@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import os
+import shutil
+import subprocess
 import threading
 import time
 from collections import deque
@@ -12,7 +14,10 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS", "rtsp_transport;tcp|stimeout;5000000")
+os.environ.setdefault(
+    "OPENCV_FFMPEG_CAPTURE_OPTIONS",
+    "rtsp_transport;tcp|fflags;nobuffer|flags;low_delay|probesize;32768|analyzeduration;0|stimeout;5000000",
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +53,11 @@ class StreamReader:
         self._lock = threading.Lock()
         self._stop_evt = threading.Event()
         self._thread: threading.Thread | None = None
+        self._proc: subprocess.Popen[bytes] | None = None
         self._latest: FramePacket | None = None
         self._seq = 0
         self._emit_times: deque[float] = deque(maxlen=60)
+        self.backend = os.getenv("RTSP_BACKEND", "auto").strip().lower() or "auto"
 
     def start(self) -> None:
         if self._thread is not None and self._thread.is_alive():
@@ -65,6 +72,12 @@ class StreamReader:
 
     def stop(self) -> None:
         self._stop_evt.set()
+        proc = self._proc
+        if proc is not None and proc.poll() is None:
+            try:
+                proc.kill()
+            except OSError:
+                pass
         if self._thread is not None:
             self._thread.join(timeout=3.0)
             self._thread = None
@@ -90,7 +103,144 @@ class StreamReader:
                 return 0.0
             return (len(self._emit_times) - 1) / span
 
+    def _is_rtsp_url(self) -> bool:
+        low = self.url.lower()
+        return low.startswith("rtsp://") or low.startswith("rtsps://")
+
+    def _build_ffmpeg_cmd(self, mode: str) -> list[str]:
+        base = [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel", "error",
+            "-rtsp_transport", "tcp",
+            "-fflags", "nobuffer",
+            "-flags", "low_delay",
+            "-strict", "experimental",
+            "-probesize", "32768",
+            "-analyzeduration", "0",
+        ]
+        if mode in ("h264_cuvid", "hevc_cuvid"):
+            return base + [
+                "-hwaccel", "cuda",
+                "-c:v", mode,
+                "-resize", f"{self.w}x{self.h}",
+                "-i", self.url,
+                "-an", "-sn",
+                "-f", "rawvideo",
+                "-pix_fmt", "bgr24",
+                "pipe:1",
+            ]
+        return base + [
+            "-i", self.url,
+            "-an", "-sn",
+            "-vf", f"scale={self.w}:{self.h}:flags=fast_bilinear",
+            "-f", "rawvideo",
+            "-pix_fmt", "bgr24",
+            "pipe:1",
+        ]
+
+    def _emit_frame(self, frame: np.ndarray, now: float) -> None:
+        with self._lock:
+            self._seq += 1
+            self._latest = FramePacket(frame=frame, seq=self._seq, t_mono=now)
+            self._emit_times.append(now)
+
     def _run(self) -> None:
+        use_ffmpeg = (
+            self.backend in ("auto", "ffmpeg", "ffmpeg_cuda")
+            and self._is_rtsp_url()
+            and shutil.which("ffmpeg") is not None
+        )
+        if use_ffmpeg:
+            self._run_ffmpeg()
+            return
+        self._run_opencv()
+
+    def _run_ffmpeg(self) -> None:
+        interval = 1.0 / self.fps if self.fps > 0 else 0.0
+        frame_bytes = self.w * self.h * 3
+        modes = ["h264_cuvid", "hevc_cuvid", "ffmpeg_cpu"]
+        mode_idx = 0
+        last_emit = 0.0
+
+        while not self._stop_evt.is_set():
+            mode = modes[mode_idx]
+            cmd = self._build_ffmpeg_cmd(mode)
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                bufsize=frame_bytes * 2,
+            )
+            self._proc = proc
+            got_frame = False
+
+            try:
+                assert proc.stdout is not None
+                while not self._stop_evt.is_set():
+                    raw = proc.stdout.read(frame_bytes)
+                    if len(raw) != frame_bytes:
+                        break
+                    if not got_frame:
+                        got_frame = True
+                        label = "CUDA" if mode.endswith("_cuvid") else "CPU"
+                        logger.info(
+                            "[%s] Connected via FFmpeg %s (%s %dx%d)",
+                            self.camera_id,
+                            label,
+                            mode,
+                            self.w,
+                            self.h,
+                        )
+                    now = time.monotonic()
+                    if now - last_emit < interval - 0.003:
+                        continue
+                    frame = np.frombuffer(raw, dtype=np.uint8).reshape((self.h, self.w, 3)).copy()
+                    last_emit = now
+                    self._emit_frame(frame, now)
+            finally:
+                if proc.poll() is None:
+                    proc.kill()
+                try:
+                    proc.wait(timeout=2.0)
+                except subprocess.TimeoutExpired:
+                    pass
+                self._proc = None
+
+            if self._stop_evt.is_set():
+                break
+
+            if not got_frame:
+                err_msg = ""
+                if proc.stderr is not None:
+                    try:
+                        err_msg = proc.stderr.read().decode("utf-8", errors="ignore").strip()
+                    except Exception:
+                        pass
+                if mode_idx + 1 < len(modes):
+                    logger.warning(
+                        "[%s] FFmpeg %s failed (%s), falling back to %s",
+                        self.camera_id,
+                        mode,
+                        err_msg or "no frames",
+                        modes[mode_idx + 1],
+                    )
+                    mode_idx += 1
+                    continue
+                if self.backend == "auto":
+                    logger.warning(
+                        "[%s] All FFmpeg modes failed (%s), falling back to OpenCV",
+                        self.camera_id,
+                        err_msg or "no frames",
+                    )
+                    self._run_opencv()
+                    return
+                mode_idx = 0
+
+            logger.warning("[%s] FFmpeg stream ended, reconnecting in 2s", self.camera_id)
+            self._stop_evt.wait(2.0)
+
+    def _run_opencv(self) -> None:
         interval = 1.0 / self.fps if self.fps > 0 else 0.0
         last_emit = 0.0
         cap: cv2.VideoCapture | None = None
@@ -105,7 +255,7 @@ class StreamReader:
                     cap = None
                     self._stop_evt.wait(2.0)
                     continue
-                logger.info("[%s] Connected to stream %s", self.camera_id, self.url)
+                logger.info("[%s] Connected to stream %s (OpenCV)", self.camera_id, self.url)
 
             if not cap.grab():
                 logger.warning("[%s] Stream grab failed, reconnecting in 2s", self.camera_id)
@@ -123,13 +273,10 @@ class StreamReader:
                 continue
 
             if frame.shape[1] != self.w or frame.shape[0] != self.h:
-                frame = cv2.resize(frame, (self.w, self.h), interpolation=cv2.INTER_AREA)
+                frame = cv2.resize(frame, (self.w, self.h), interpolation=cv2.INTER_LINEAR)
 
             last_emit = now
-            with self._lock:
-                self._seq += 1
-                self._latest = FramePacket(frame=frame, seq=self._seq, t_mono=now)
-                self._emit_times.append(now)
+            self._emit_frame(frame, now)
 
         if cap is not None:
             cap.release()

@@ -11,7 +11,7 @@ import numpy as np
 from ai.aux_pipeline.flow_occupancy import FlowOccupancy
 from ai.config import AIConfig
 from ai.core_pipeline.detector import Det
-from ai.core_pipeline.tracker import CameraTracker
+from ai.core_pipeline.tracker import CameraTracker, Track
 from ai.core_pipeline.zone_time import ZoneTimeAnalyzer
 from ai.decision.classifier import classify
 from ai.decision.occlusion import OcclusionShield
@@ -105,15 +105,79 @@ class CameraProcessor:
             crop = pkt.frame[y0:y1, x0:x1]
             return crop, (x0, y0)
 
-    def process(self, det: Det, now: float) -> dict:
+    @staticmethod
+    def _default_metrics() -> dict:
+        return {
+            "w_total": 0.0,
+            "n_2w": 0,
+            "n_4w": 0,
+            "t50_2w": None,
+            "t50_4w": None,
+            "d85_2w": None,
+            "d85_4w": None,
+            "n_completed_2w": 0,
+            "n_completed_4w": 0,
+            "o_vis": 0.0,
+            "v_flow": 0.0,
+            "state_conf": 0.0,
+        }
+
+    def _format_detections(self, tracks: list[Track]) -> list[dict]:
+        w_inv = 1.0 / float(self.cfg.frame_w)
+        h_inv = 1.0 / float(self.cfg.frame_h)
+        return [
+            {
+                "tid": t.tid,
+                "group": t.group,
+                "cls": t.cls_name,
+                "conf": round(t.conf, 2),
+                "bbox": [
+                    round(float(t.xyxy[0]) * w_inv, 4),
+                    round(float(t.xyxy[1]) * h_inv, 4),
+                    round(float(t.xyxy[2]) * w_inv, 4),
+                    round(float(t.xyxy[3]) * h_inv, 4),
+                ],
+                "in_zone": point_in_zone(self.zone_px, t.foot),
+            }
+            for t in tracks
+        ]
+
+    def process_fast(
+        self, det: Det, now: float
+    ) -> tuple[dict, tuple[np.ndarray, Det, list[Track], float]]:
+        """Run ByteTrack + normalized bbox formatting immediately (~1-2ms) and return macro task."""
         with self._lock:
             frame = self._last_frame
             assert frame is not None
 
+            tracks = self.tracker.update(det, now)
+            detections = self._format_detections(tracks)
+            healthy = self.reader.healthy
+            prev = self._last_result
+
+            fast_result = {
+                "camera_id": self.cam_id,
+                "ts": round(time.time(), 3),
+                "stream_ok": healthy,
+                "fps": round(self.reader.measured_fps, 1),
+                "detections": detections,
+                "metrics": prev["metrics"] if prev is not None else self._default_metrics(),
+                "raw_state": prev["raw_state"] if prev is not None else "CLEAR",
+                "state": prev["state"] if prev is not None else ("UNKNOWN" if not healthy else "CLEAR"),
+                "state_conf": prev["state_conf"] if prev is not None else 0.0,
+                "occlusion_hold": prev["occlusion_hold"] if prev is not None else False,
+                "confirmed_state": prev["confirmed_state"] if prev is not None else "CLEAR",
+            }
+            return fast_result, (frame, det, tracks, now)
+
+    def process_macro(
+        self, frame: np.ndarray, det: Det, tracks: list[Track], now: float
+    ) -> dict:
+        """Run CPU-heavy ZoneTime, FlowOccupancy, Occlusion, Classifier, and StateMachine."""
+        with self._lock:
             dt = (now - self._last_process_t) if self._last_process_t is not None else (1.0 / self.cfg.target_fps)
             self._last_process_t = now
 
-            tracks = self.tracker.update(det, now)
             zm = self.zone_time.update(tracks, now)
 
             d85_max = max(
@@ -140,25 +204,7 @@ class CameraProcessor:
                 occ=occ,
             )
 
-            w_inv = 1.0 / float(self.cfg.frame_w)
-            h_inv = 1.0 / float(self.cfg.frame_h)
-            detections = [
-                {
-                    "tid": t.tid,
-                    "group": t.group,
-                    "cls": t.cls_name,
-                    "conf": round(t.conf, 2),
-                    "bbox": [
-                        round(float(t.xyxy[0]) * w_inv, 4),
-                        round(float(t.xyxy[1]) * h_inv, 4),
-                        round(float(t.xyxy[2]) * w_inv, 4),
-                        round(float(t.xyxy[3]) * h_inv, 4),
-                    ],
-                    "in_zone": point_in_zone(self.zone_px, t.foot),
-                }
-                for t in tracks
-            ]
-
+            detections = self._format_detections(tracks)
             ts_wall = time.time()
             result = {
                 "camera_id": self.cam_id,
@@ -190,6 +236,10 @@ class CameraProcessor:
 
             return result
 
+    def process(self, det: Det, now: float) -> dict:
+        _, macro_task = self.process_fast(det, now)
+        return self.process_macro(*macro_task)
+
     def idle_result(self, now: float) -> dict:
         with self._lock:
             healthy = self.reader.healthy
@@ -207,20 +257,7 @@ class CameraProcessor:
                 "stream_ok": healthy,
                 "fps": 0.0,
                 "detections": [],
-                "metrics": {
-                    "w_total": 0.0,
-                    "n_2w": 0,
-                    "n_4w": 0,
-                    "t50_2w": None,
-                    "t50_4w": None,
-                    "d85_2w": None,
-                    "d85_4w": None,
-                    "n_completed_2w": 0,
-                    "n_completed_4w": 0,
-                    "o_vis": 0.0,
-                    "v_flow": 0.0,
-                    "state_conf": 0.0,
-                },
+                "metrics": self._default_metrics(),
                 "raw_state": "CLEAR",
                 "state": "UNKNOWN" if not healthy else "CLEAR",
                 "state_conf": 0.0,

@@ -12,6 +12,26 @@ from ai.config import AIConfig
 from ai.core_pipeline.detector import Det
 
 
+def _snap_box_to_raw(track_box: np.ndarray, raw_boxes: np.ndarray, min_iou: float = 0.45) -> np.ndarray:
+    """Replace Kalman-smoothed box with exact current-frame YOLO box if IoU >= min_iou (C09)."""
+    if len(raw_boxes) == 0:
+        return track_box
+    x1 = np.maximum(track_box[0], raw_boxes[:, 0])
+    y1 = np.maximum(track_box[1], raw_boxes[:, 1])
+    x2 = np.minimum(track_box[2], raw_boxes[:, 2])
+    y2 = np.minimum(track_box[3], raw_boxes[:, 3])
+
+    inter = np.maximum(0.0, x2 - x1) * np.maximum(0.0, y2 - y1)
+    area_t = max(1e-6, float((track_box[2] - track_box[0]) * (track_box[3] - track_box[1])))
+    area_r = np.maximum(1e-6, (raw_boxes[:, 2] - raw_boxes[:, 0]) * (raw_boxes[:, 3] - raw_boxes[:, 1]))
+    ious = inter / (area_t + area_r - inter)
+
+    best_idx = int(np.argmax(ious))
+    if float(ious[best_idx]) >= min_iou:
+        return raw_boxes[best_idx].astype(np.float32)
+    return track_box
+
+
 @dataclass
 class Track:
     """Tracked vehicle in 1280x720 coordinates with voted class and bottom-center foot."""
@@ -65,7 +85,7 @@ class CameraTracker:
         if tracked.tracker_id is not None and len(tracked) > 0:
             for i in range(len(tracked)):
                 tid = int(tracked.tracker_id[i])
-                xyxy = tracked.xyxy[i].astype(np.float32)
+                xyxy = _snap_box_to_raw(tracked.xyxy[i].astype(np.float32), det.xyxy)
                 conf = float(tracked.confidence[i]) if tracked.confidence is not None else 0.5
                 cid = int(tracked.class_id[i]) if tracked.class_id is not None else 0
                 raw_cls = self._id_to_cls.get(cid, "car")

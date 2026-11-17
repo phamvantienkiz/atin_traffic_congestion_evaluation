@@ -60,6 +60,10 @@ class CongestionStagingWorker:
 
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
+        self._macro_lock = threading.Lock()
+        self._macro_evt = threading.Event()
+        self._latest_macro_task: tuple[np.ndarray, Any, list, float] | None = None
+        self._macro_thread: threading.Thread | None = None
         self._active_zone_id: str | None = None
         self._active_zone_name: str = "ROI"
 
@@ -122,11 +126,17 @@ class CongestionStagingWorker:
         )
 
     def start(self) -> None:
-        """Start StreamReader and inference/publish loop."""
+        """Start StreamReader, fast inference/publish loop, and async macro loop."""
         if self._thread and self._thread.is_alive():
             return
         self._stop_event.clear()
         self.processor.start()
+        self._macro_thread = threading.Thread(
+            target=self._macro_loop,
+            name=f"macro_{self.camera_code}",
+            daemon=True,
+        )
+        self._macro_thread.start()
         self._thread = threading.Thread(
             target=self._run_loop,
             name=f"congestion_{self.camera_code}",
@@ -138,8 +148,11 @@ class CongestionStagingWorker:
     def stop(self) -> None:
         """Stop worker and underlying RTSP StreamReader safely (C02)."""
         self._stop_event.set()
+        self._macro_evt.set()
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=3.0)
+        if self._macro_thread and self._macro_thread.is_alive():
+            self._macro_thread.join(timeout=3.0)
         self.processor.stop()
         logger.info("[%s] Worker stopped.", self.camera_code)
 
@@ -361,8 +374,34 @@ class CongestionStagingWorker:
             info.rc,
         )
 
+    def _macro_loop(self) -> None:
+        """Background CPU loop: ZoneTime, FlowOccupancy, Classifier V2, and StateMachine."""
+        while not self._stop_event.is_set():
+            if not self._macro_evt.wait(timeout=0.1):
+                continue
+            self._macro_evt.clear()
+
+            if self._stop_event.is_set():
+                break
+
+            with self._macro_lock:
+                task = self._latest_macro_task
+                self._latest_macro_task = None
+
+            if task is None:
+                continue
+
+            frame, det, tracks, now_mono = task
+            macro_res = self.processor.process_macro(frame, det, tracks, now_mono)
+            self.stats["last_state"] = macro_res["state"]
+
+            if self.processor.pending_event is not None:
+                partial, ev_frame = self.processor.pending_event
+                self.processor.pending_event = None
+                self._handle_confirmed_event(partial, ev_frame)
+
     def _run_loop(self) -> None:
-        """Main loop: infer new frames via poc/backend/ai and publish BBox/HUD every 0.2s."""
+        """Fast loop: YOLO + ByteTrack -> publish BBox immediately, offload macro to _macro_loop."""
         last_bbox_ts = 0.0
 
         while not self._stop_event.is_set():
@@ -374,19 +413,20 @@ class CongestionStagingWorker:
                 t0 = time.perf_counter()
                 with self.detector_lock:
                     dets = self.detector.detect_batch([crop], [offset])
-                result = self.processor.process(dets[0], now_mono)
+
+                # Branch 1 (Fast Path): ByteTrack + snap to raw YOLO bbox (~1ms)
+                fast_result, macro_task = self.processor.process_fast(dets[0], now_mono)
                 self.stats["last_inference_ms"] = round((time.perf_counter() - t0) * 1000.0, 1)
                 self.stats["frames_processed"] += 1
-                self.stats["last_state"] = result["state"]
 
-                if self.processor.pending_event is not None:
-                    partial, ev_frame = self.processor.pending_event
-                    self.processor.pending_event = None
-                    self._handle_confirmed_event(partial, ev_frame)
-
-                # Publish ngay lập tức sau mỗi frame suy luận để giảm độ trễ tối đa
+                # Publish BBox immediately without waiting for MOG2 / Optical Flow
                 last_bbox_ts = time.time()
-                self._publish_bbox(result)
+                self._publish_bbox(fast_result)
+
+                # Branch 2 (Async Macro): overwrite latest slot non-blocking
+                with self._macro_lock:
+                    self._latest_macro_task = macro_task
+                self._macro_evt.set()
             else:
                 result = self.processor.idle_result(now_mono)
                 now_wall = time.time()

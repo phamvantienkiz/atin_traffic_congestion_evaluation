@@ -96,8 +96,10 @@ function runClassify(m) {
       [m.d2, 5.0],
     ].every(([x, th]) => x === null || x <= th);
 
-  const timeCongested =
-    gt(m.t4, 5.5) || gt(m.d4, 6.5) || gt(m.t2, 4.5) || gt(m.d2, 5.0);
+  const hasT50Congested = gt(m.t4, 5.5) || gt(m.t2, 4.5);
+  const hasD85Congested =
+    (m.t4 === null && gt(m.d4, 6.5)) || (m.t2 === null && gt(m.d2, 5.0));
+  const timeCongested = hasT50Congested || (hasD85Congested && m.v <= 15.0);
 
   const timeGridlock =
     gt(m.t4, 16.0) || gt(m.d4, 20.0) || gt(m.t2, 13.5) || gt(m.d2, 17.0);
@@ -109,6 +111,16 @@ function runClassify(m) {
       ? 'W < 3.0 và chưa có T50/D85 → Sanity Gate chặn nhiễu đèn pha/nền.'
       : 'Độ phủ O_vis < 40% (đường thoáng).';
     return { state: 'CLEAR', conf: Number(conf.toFixed(2)), reason: why };
+  }
+
+  // 1b. High-flow override: dense traffic actively discharging is CLEAR, not congested
+  if (m.v > 18.0) {
+    const conf = Math.min(0.98, 0.84 + (timeClear ? 0.12 : 0.0));
+    return {
+      state: 'CLEAR',
+      conf: Number(conf.toFixed(2)),
+      reason: 'V_flow > 18.0 px/s (lưu lượng đang thoát nhanh) → ép về CLEAR dù O_vis cao.',
+    };
   }
 
   // 2. GRIDLOCKED
@@ -127,14 +139,14 @@ function runClassify(m) {
 
   // 3. CONGESTED
   if (m.o >= 0.70) {
-    if ((timeCongested && m.v <= 25.0) || (!hasTime && m.v <= 18.0)) {
+    if ((timeCongested && m.v <= 18.0) || (!hasTime && m.v <= 14.0)) {
       const conf = Math.min(
         0.98,
         0.72 + (timeCongested ? 0.14 : 0.0) + (m.w >= 15.0 ? 0.10 : 0.0)
       );
       const why = timeCongested
-        ? 'O_vis ≥ 70%, V_flow ≤ 25 px/s kèm T50/D85 vượt ngưỡng chậm (>5.5s/6.5s 4B).'
-        : 'O_vis ≥ 70%, V_flow ≤ 18.0 px/s (nhánh Macro-only khi mất T50/D85).';
+        ? 'O_vis ≥ 70%, V_flow ≤ 18.0 px/s kèm T50 chậm (hoặc D85 khi chưa có T50 & Flow ≤ 15).'
+        : 'O_vis ≥ 70%, V_flow ≤ 14.0 px/s (nhánh Macro-only khi mất T50/D85).';
       return { state: 'CONGESTED', conf: Number(conf.toFixed(2)), reason: why };
     }
   } else if (timeGridlock && m.v <= 15.0) {

@@ -235,7 +235,7 @@
 
             <div class="card-soft">
               <div class="card-label"><span>Bước 4 · Đo thời gian T50 &amp; D85 (Cửa sổ 30s)</span><span class="state-pill st-blue">Trọng tài phân xử</span></div>
-              <div class="title-md">Phân xử chính xác vùng Flow chồng lấp 10–25 px/s</div>
+              <div class="title-md">Phân xử chính xác vùng Flow chồng lấp 10–18 px/s</div>
               <p class="body-txt">
                 <strong>T50</strong> là trung vị thời gian xe đi qua ≥ 45% chiều dài zone (cửa sổ <code class="mono">30s</code>, cần <code class="mono">≥ 2</code> mẫu).
                 <strong>D85</strong> là phân vị 85 thời gian lưu của các xe <em>đang kẹt bên trong</em> (<code class="mono">≥ 2</code> xe nằm <code class="mono">≥ 2.0s</code>).
@@ -271,11 +271,11 @@
             </div>
 
             <div class="card-soft">
-              <div class="card-label"><span>Bước 2 · MOG2 (16, lr=0.002) + MORPH_CLOSE (9×7)</span><span class="state-pill st-purple">Lấp khe hở xe máy</span></div>
+              <div class="card-label"><span>Bước 2 · MOG2 (16, lr=0.002) + MORPH_CLOSE (5×5)</span><span class="state-pill st-purple">Lấp khe hở xe máy</span></div>
               <div class="title-md">Hợp nhất toàn bộ det.xyxy + MOG2 trên 320×180</div>
               <p class="body-txt">
                 Hạ <code class="mono">varThreshold=16</code> và <code class="mono">lr=0.002</code> để bắt xe tối màu và tránh hòa tan xe chạy chậm.
-                Gộp <code class="mono">fg | mask_yolo</code> rồi chạy <code class="mono">MORPH_CLOSE</code> elip <code class="mono">(9, 7)</code> để lấp khe hở nhỏ giữa tay lái/bánh xe máy đi sát nhau.
+                Gộp <code class="mono">fg | mask_yolo</code> rồi chạy <code class="mono">MORPH_CLOSE</code> elip <code class="mono">(5, 5)</code> để lấp khe hở nhỏ giữa xe máy mà không thổi phồng độ phủ.
               </p>
             </div>
 
@@ -353,7 +353,7 @@
 
           <div class="card-soft" style="flex-direction: row; align-items: center; justify-content: space-between; padding: 14px 20px;">
             <div class="body-txt">
-              <strong>Nguyên tắc V2:</strong> <code class="mono">O_vis</code> đo mức độ kín mặt đường, <code class="mono">Flow</code> đo vận tốc tổng thể, <code class="mono">T50 / D85</code> phân xử vùng tốc độ giao thoa (<code class="mono">6–25 px/s</code>) và <code class="mono">W</code> xác thực có xe thật.
+              <strong>Nguyên tắc V2:</strong> <code class="mono">O_vis</code> đo mức độ kín mặt đường, <code class="mono">Flow</code> đo vận tốc tổng thể (nếu <code class="mono">Flow &gt; 18.0 px/s</code> luôn là <code class="mono">CLEAR</code>), <code class="mono">T50 / D85</code> phân xử vùng tốc độ giao thoa (<code class="mono">6–18 px/s</code>) và <code class="mono">W</code> xác thực có xe thật.
             </div>
           </div>
         </div>
@@ -391,14 +391,14 @@
                   <tr>
                     <td><span class="state-pill st-clear">CLEAR</span><br/><small style="color:var(--text-tertiary);">Thông thoáng</small></td>
                     <td><code class="mono">&lt; 40%</code> (vắng)<br/>hoặc <code class="mono">40%–70%</code> (đông)</td>
-                    <td>Đường vắng (<code class="mono">&lt; 40%</code>), hoặc đông nhưng <code class="mono">T50/D85</code> dưới ngưỡng chậm &amp; <code class="mono">Flow ≥ 10.0 px/s</code></td>
-                    <td><code class="mono">O_vis &lt; 40%</code>, hoặc <code class="mono">Flow &gt; 18.0 px/s</code>,<br/>hoặc <strong>Cổng an toàn</strong> <code class="mono">W &lt; 3.0</code> (chặn chói đèn)</td>
+                    <td>Đường vắng (<code class="mono">&lt; 40%</code>), <code class="mono">Flow &gt; 18.0 px/s</code> (thoát nhanh), hoặc đông nhưng <code class="mono">T50</code> dưới ngưỡng chậm &amp; <code class="mono">Flow ≥ 10.0 px/s</code></td>
+                    <td><code class="mono">O_vis &lt; 40%</code>, hoặc <code class="mono">Flow &gt; 14.0 px/s</code>,<br/>hoặc <strong>Cổng an toàn</strong> <code class="mono">W &lt; 3.0</code> (chặn chói đèn)</td>
                   </tr>
                   <tr>
                     <td><span class="state-pill st-congested">CONGESTED</span><br/><small style="color:var(--text-tertiary);">Ùn tắc</small></td>
                     <td><code class="mono">≥ 70%</code><br/><small>(hoặc <code class="mono">40–70%</code> kẹt cục bộ)</small></td>
-                    <td><code class="mono">Flow ≤ 25.0 px/s</code> + vượt <strong>Ngưỡng Chậm</strong><br/><small>(Nếu <code class="mono">40–70%</code>: cần vượt <strong>Ngưỡng Kẹt</strong> + <code class="mono">Flow ≤ 15.0</code>)</small></td>
-                    <td><code class="mono">Flow ≤ 18.0 px/s</code><br/>(<code class="mono">V_CONGESTED_MACRO</code>)</td>
+                    <td><code class="mono">Flow ≤ 18.0 px/s</code> + <code class="mono">T50</code> chậm (hoặc <code class="mono">D85</code> khi thiếu <code class="mono">T50</code> &amp; <code class="mono">Flow ≤ 15.0</code>)<br/><small>(Nếu <code class="mono">40–70%</code>: cần vượt <strong>Ngưỡng Kẹt</strong> + <code class="mono">Flow ≤ 15.0</code>)</small></td>
+                    <td><code class="mono">Flow ≤ 14.0 px/s</code><br/>(<code class="mono">V_CONGESTED_MACRO</code>)</td>
                   </tr>
                   <tr>
                     <td><span class="state-pill st-gridlocked">GRIDLOCKED</span><br/><small style="color:var(--text-tertiary);">Kẹt cứng</small></td>
@@ -552,7 +552,7 @@
               <div class="card-label"><span>Case 2 · Vùng giao thoa Flow</span><span class="state-pill st-blue">T50 phân xử</span></div>
               <div class="title-md">Cùng Flow 15 px/s: lúc CLEAR, lúc CONGESTED</div>
               <p class="body-txt">
-                <strong>Input:</strong> <code class="mono">O_vis=72%</code>, <code class="mono">Flow=15.0 px/s</code> (nằm trong dải chồng lấp 10–25 px/s).<br/>
+                <strong>Input:</strong> <code class="mono">O_vis=72%</code>, <code class="mono">Flow=15.0 px/s</code> (nằm trong dải chồng lấp 10–18 px/s).<br/>
                 <strong>Xử lý:</strong> Nếu <code class="mono">T50_4W = 4.0s (≤ 5.5s)</code> → <strong>CLEAR</strong>; nếu <code class="mono">T50_4W = 10.0s (&gt; 5.5s)</code> → <strong>CONGESTED</strong>.
               </p>
             </div>
@@ -632,7 +632,7 @@
               <rect x="436" y="32" width="265" height="106" rx="14" fill="#EEF3FF" stroke="#D9E8FF" stroke-width="1.5"></rect>
               <text x="568" y="60" text-anchor="middle" font-size="13" font-weight="600" fill="#1545BD">Tầng 1: Provisional (Live HUD)</text>
               <text x="568" y="82" text-anchor="middle" font-size="11.5" fill="#0B0B0F">Làm mượt đa số cửa sổ 5.0s</text>
-              <text x="568" y="101" text-anchor="middle" font-size="11.5" fill="#6B6B76">Exit Hysteresis: cần 15.0s CLEAR</text>
+              <text x="568" y="101" text-anchor="middle" font-size="11.5" fill="#6B6B76">Exit Hysteresis: cần 10.0s CLEAR</text>
               <text x="568" y="119" text-anchor="middle" font-size="11" fill="#6B6B76">liên tục mới hạ từ tắc về CLEAR</text>
 
               <rect x="736" y="20" width="368" height="130" rx="14" fill="#FDECEC" stroke="#F7C7C4" stroke-width="1.5"></rect>

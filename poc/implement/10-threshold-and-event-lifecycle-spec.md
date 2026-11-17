@@ -42,26 +42,23 @@ Tuy nhiên, khi chuyển các khoảng số bạn ghi nhận sang **biểu thứ
 ### ⚠️ Cảnh báo 2: Ba khoảng `Flow (px/s)` bạn đưa ra đang BỊ CHỒNG LẤP NHAU (`Overlap`) rất rộng!
 
 Hãy nhìn vào 3 dải `Flow` trong mô tả của bạn:
-- `CLEAR` (Đông chạy TB): **`10 <= Flow <= 35 px/s`**
-- `CONGESTED` (Đông chạy chậm): **`6 <= Flow <= 25 px/s`** $\longrightarrow$ *Trùng với `CLEAR` trong toàn bộ đoạn `10 – 25 px/s`!*
-- `GRIDLOCKED` (Kẹt / nhích nhẹ): **`0 <= Flow <= 15 px/s`** $\longrightarrow$ *Trùng với `CONGESTED` ở đoạn `6 – 15 px/s` và trùng cả với `CLEAR` ở đoạn `10 – 15 px/s`!*
-
-**Hệ quả nếu code không phân tách rõ vùng chồng lấp:**
-- Giả sử tại một thời điểm, `Flow = 12 px/s`. Con số `12 px/s` này **thỏa mãn đồng thời cả `CLEAR` (`10..35`), cả `CONGESTED` (`6..25`) lẫn `GRIDLOCKED` (`0..15`)**!
-- Hơn nữa, nếu một tuyến đường có `O_vis = 85%` và `Flow = 14 px/s` (thực tế xe vẫn đang trôi chậm ở mức `CONGESTED`), mà điều kiện `GRIDLOCKED` cho phép `Flow <= 15 px/s` (không kèm điều kiện bắt buộc `T50 > 16s / D85 > 20s`), hệ thống sẽ **báo nhầm `CONGESTED` thành `GRIDLOCKED`**!
+- `CLEAR` (Đông chạy TB / Thoát nhanh): **`10 <= Flow <= 35 px/s`** (và **`Flow > 18 px/s`** luôn là `CLEAR`)
+- `CONGESTED` (Đông chạy chậm): **`6 <= Flow <= 18 px/s`** *(trước đây đặt 25 px/s gây báo giả khi mật độ cao nhưng xe vẫn thoát nhanh)*
+- `GRIDLOCKED` (Kẹt / nhích nhẹ): **`0 <= Flow <= 15 px/s`**
 
 **✅ Giải pháp xử lý vùng chồng lấp `Flow` trong Logic Code:**
 Chia `Flow` thành **2 mức ngưỡng phân tách rõ ràng** khi đi kèm với `T50 / D85`:
 1. **Khi có dữ liệu `T50 / D85` (Bắt được BBox xe):**
-   - `T50` và `D85` sẽ là **trọng tài phân xử chính xác tuyệt đối** trong vùng `Flow` chồng lấp (`6 – 25 px/s`):
-     - Nếu `Flow` nằm trong `[0 .. 15 px/s]` **VÀ** (`T50_4W > 16s` hoặc `D85_4W > 20s` hoặc `T50_2W > 14s` hoặc `D85_2W > 17s`) $\longrightarrow$ Chốt **`GRIDLOCKED`**.
-     - Nếu `Flow` nằm trong `[6 .. 25 px/s]` **VÀ** thời gian vượt ngưỡng `CLEAR` (`T50_4W > 5.5s` / `D85_4W > 6.5s` / `T50_2W > 4.5s` / `D85_2W > 5.0s`) nhưng chưa vượt ngưỡng `GRIDLOCKED` $\longrightarrow$ Chốt **`CONGESTED`**.
-     - Nếu `T50 / D85` đều nhỏ hơn hoặc bằng ngưỡng `CLEAR` (`<= 5.5s / 6.5s` cho 4W và `<= 4.5s / 5.0s` cho 2W) và `Flow >= 10 px/s` $\longrightarrow$ Chốt **`CLEAR`** (dù `O_vis` lên tới `40% – 70%`!).
+   - Nếu `Flow > 18.0 px/s` $\longrightarrow$ Ép trả về **`CLEAR`** ngay (High-flow override: đường đông nhưng lưu lượng đang thoát nhanh).
+   - `T50` và `D85` phân xử trong vùng `Flow` chồng lấp (`6 – 18 px/s`):
+     - Nếu `Flow` nằm trong `[0 .. 15 px/s]` **VÀ** (`T50_4W > 16s` hoặc `D85_4W > 20s` hoặc `T50_2W > 13.5s` hoặc `D85_2W > 17s`) $\longrightarrow$ Chốt **`GRIDLOCKED`**.
+     - Nếu `Flow` nằm trong `[6 .. 18 px/s]` **VÀ** `T50` vượt ngưỡng `CLEAR` (`T50_4W > 5.5s` / `T50_2W > 4.5s`; hoặc dùng `D85` khi nhóm xe đó chưa có `T50` kèm `Flow <= 15 px/s`) nhưng chưa vượt ngưỡng `GRIDLOCKED` $\longrightarrow$ Chốt **`CONGESTED`**.
+     - Nếu `T50 / D85` đều nhỏ hơn hoặc bằng ngưỡng `CLEAR` (`<= 5.5s / 6.5s` cho 4W và `<= 4.5s / 5.0s` cho 2W) và `Flow >= 10 px/s` $\longrightarrow$ Chốt **`CLEAR`** (dù `O_vis` cao!).
 2. **Khi `T50 / D85` bị `None` (Do trên Production bắt được quá ít BBox hoặc đứt ID):**
    - Lúc này chỉ còn `O_vis` và `Flow` quyết định, nên ngưỡng `Flow` **bắt buộc phải tách rời không chồng lấp**:
      - `GRIDLOCKED` (Macro-only): **`O_vis >= 85%` (`0.85`)** **VÀ** **`Flow <= 6.0 px/s`** (thực sự nhích cực chậm `< 5 km/h` hoặc đứng yên).
-     - `CONGESTED` (Macro-only): **`O_vis >= 70%` (`0.70`)** **VÀ** **`Flow <= 18.0 px/s`** (chậm hơn rõ rệt so với mức chạy trung bình `18 – 35 px/s`).
-     - `CLEAR`: Các trường hợp còn lại (`O_vis < 40%` hoặc `Flow > 18.0 px/s`).
+     - `CONGESTED` (Macro-only): **`O_vis >= 70%` (`0.70`)** **VÀ** **`Flow <= 14.0 px/s`** (chậm hơn rõ rệt so với mức chạy trung bình `14 – 35 px/s`).
+     - `CLEAR`: Các trường hợp còn lại (`O_vis < 40%` hoặc `Flow > 14.0 px/s`).
 
 ---
 
@@ -92,8 +89,8 @@ Chia `Flow` thành **2 mức ngưỡng phân tách rõ ràng** khi đi kèm vớ
 | **Độ phủ `CLEAR` (`O_CLEAR`)** | `< 40%` (`0.40`) | **`0.40` (`40%`)** | Chốt giữ nguyên `40%`. |
 | **Độ phủ `CONGESTED` (`O_CONGESTED`)** | `70% – 90%` (`0.70`) | **`0.70` (`70%`)** | Chốt giữ nguyên `70%` (`70% <= O_vis < 85%`). |
 | **Độ phủ `GRIDLOCKED` (`O_GRIDLOCK`)** | `>= 90%` (`0.90`) | **`0.85` (`85%`)** | **Chốt hạ từ `90%` xuống `85%`** để bù cho khe hở giữa các xe và phần bóng râm bị loại bỏ. |
-| **Flow `CLEAR` (`V_CLEAR`)** | `> 10 px/s` (vắng) / `10 – 35 px/s` (đông TB) | **`V_CLEAR_FAST = 25.0 px/s`**<br>**`V_CLEAR_MIN = 10.0 px/s`** | Nếu `O_vis < 40%` hoặc (`40% <= O_vis < 70%` và `Flow >= 10` kèm `T50/D85` trong ngưỡng `CLEAR`) $\rightarrow$ `CLEAR`. |
-| **Flow `CONGESTED` (`V_CONGESTED_MAX`)** | `6 <= Flow <= 25 px/s` | **`V_CONGESTED_MAX = 25.0 px/s`** *(Macro-only: `<= 18.0 px/s`)* | Giải quyết vùng chồng lấp `10 – 25 px/s` giữa `CLEAR` và `CONGESTED`. |
+| **Flow `CLEAR` (`V_CLEAR`)** | `> 10 px/s` (vắng) / `10 – 35 px/s` (đông TB) | **`V_CONGESTED_MAX = 18.0 px/s`** *(> 18.0 luôn CLEAR)*<br>**`V_CLEAR_MIN = 10.0 px/s`** | Nếu `O_vis < 40%`, `Flow > 18.0 px/s`, hoặc (`40% <= O_vis < 70%` và `Flow >= 10` kèm `T50/D85` trong ngưỡng `CLEAR`) $\rightarrow$ `CLEAR`. |
+| **Flow `CONGESTED` (`V_CONGESTED_MAX`)** | `6 <= Flow <= 18 px/s` | **`V_CONGESTED_MAX = 18.0 px/s`** *(Macro-only: `<= 14.0 px/s`)* | Chống báo giả khi `O_vis >= 80%` nhưng dòng xe vẫn thoát nhanh. |
 | **Flow `GRIDLOCKED` (`V_GRIDLOCK_MAX` / `V_STALL`)** | `0 <= Flow <= 15 px/s` | **`V_GRIDLOCK_MAX = 15.0 px/s`** *(khi có `T50/D85`)*<br>**`V_STALL = 6.0 px/s`** *(khi xét Macro-only)* | Nếu có `T50/D85` báo kẹt (`>16s/20s`) thì cho phép `Flow <= 15 px/s`. Nếu mất `T50/D85` (chỉ xét Macro) thì `Flow` phải `<= 6.0 px/s`. |
 | **Ngưỡng Thời gian Ranh giới `CLEAR` $\rightarrow$ `CONGESTED`** | `T50_4W <= 5.5s`<br>`D85_4W <= 6.5s`<br>`T50_2W <= 4.5s`<br>`D85_2W <= 5.0s` | **`CONGESTED_T50_4W_S = 5.5`**<br>**`CONGESTED_D85_4W_S = 6.5`**<br>**`CONGESTED_T50_2W_S = 4.5`**<br>**`CONGESTED_D85_2W_S = 5.0`** | **Khớp 100% với quan sát của bạn!** Vượt các mốc này là bắt đầu vào vùng thời gian của `CONGESTED`. |
 | **Ngưỡng Thời gian Ranh giới `CONGESTED` $\rightarrow$ `GRIDLOCKED`** | `T50_4W > 16.0s` *(Congested <= 15.5s)*<br>`D85_4W > 20.0s` *(Congested <= 19.5s)*<br>`T50_2W > 14.0s` *(Congested <= 12.5s)*<br>`D85_2W > 17.0s` *(Congested <= 16.5s)* | **`GRIDLOCK_T50_4W_S = 16.0`**<br>**`GRIDLOCK_D85_4W_S = 20.0`**<br>**`GRIDLOCK_T50_2W_S = 13.5`**<br>**`GRIDLOCK_D85_2W_S = 17.0`** | Khớp sát số bạn đưa ra và nối liền mạch không để hở khoảng trống giữa `CONGESTED` và `GRIDLOCKED`. |
@@ -106,7 +103,7 @@ Chia `Flow` thành **2 mức ngưỡng phân tách rõ ràng** khi đi kèm vớ
 
 1. **Nhiệm vụ 1 — Cổng Xác Nhận Phương Tiện Thật (`Vehicle Sanity Gate`):**
    - Dùng tổng điểm trọng số thực tế `W_total` ở mức sàn rất thấp (`W_SANITY_MIN = 3.0`, tương đương chỉ cần bắt được **1 chiếc ô tô** hoặc **3 chiếc xe máy** trong vùng) để xác nhận với hệ thống rằng độ phủ `O_vis` cao là do **phương tiện giao thông thật** tạo ra (chứ không phải mặt đường trống bị lóa đèn pha đêm mưa).
-2. **Nhiệm vụ 2 — Phân xử Trạng thái trong Vùng Chồng lấp của `Flow` (`6 – 25 px/s`):**
+2. **Nhiệm vụ 2 — Phân xử Trạng thái trong Vùng Chồng lấp của `Flow` (`6 – 18 px/s`):**
    - Khi `Flow` nằm ở vùng lưng chừng (`10 – 22 px/s`), hệ thống nhìn vào `T50` và `D85`:
      - Nếu `T50 / D85` vẫn nhỏ hơn hoặc bằng mốc `CLEAR` (`5.5s / 6.5s` với 4W; `4.5s / 5.0s` với 2W) $\longrightarrow$ Khẳng định dòng xe vẫn thoát tốt (`CLEAR`).
      - Nếu `T50 / D85` đã vượt mốc `CLEAR` (nằm trong khoảng `5.5s – 16s` với 4W hoặc `4.5s – 13.5s` với 2W) $\longrightarrow$ Khẳng định xe đang bị chậm lại (`CONGESTED`).
@@ -223,11 +220,11 @@ Qua kiểm chứng trực tiếp trên ảnh hiện trường [poc/report/images
 
 Đây là bước quyết định giúp `O_vis` trên đường hỗn hợp nhiều xe máy và camera góc nghiêng đạt đúng thang đo `40% / 70% / 85%` của mắt người mà **không cần chỉnh ngưỡng riêng cho từng camera**:
 
-1. **Thay `MORPH_OPEN(3x3)` bằng `MORPH_CLOSE` với Kernel Elip `(9, 7)` trên mặt nạ gộp `occupied_raw = fg | mask_yolo`:**
+1. **Thay `MORPH_OPEN(3x3)` bằng `MORPH_CLOSE` với Kernel Elip `(5, 5)` trên mặt nạ gộp `occupied_raw = fg | mask_yolo`:**
    - Bỏ bước `MORPH_OPEN(3x3)` trên `fg` (vì nó xóa mất các xe máy ở xa có kích thước nhỏ) hoặc chỉ lọc nhiễu điểm đơn lẻ `MORPH_OPEN(2x2)` trên `fg`.
-   - Sau khi hợp nhất `raw_union = cv2.bitwise_or(fg, mask_yolo)`, áp dụng **`cv2.morphologyEx(raw_union, cv2.MORPH_CLOSE, kernel_ellipse_9x7)`**:
+   - Sau khi hợp nhất `raw_union = cv2.bitwise_or(fg, mask_yolo)`, áp dụng **`cv2.morphologyEx(raw_union, cv2.MORPH_CLOSE, kernel_ellipse_5x5)`**:
      - Khi đường thoáng (các xe cách xa nhau `> 1.5m`): khoảng trống giữa các xe lớn hơn kernel nên không nối dính vào nhau $\rightarrow$ `O_vis` vẫn giữ mức thấp (`< 40%`).
-     - Khi đường đông / ùn tắc / kẹt cứng (các xe máy đi sát nhau): `MORPH_CLOSE (9x7)` tự động lấp đầy các khe hở nhỏ giữa tay lái, bánh xe và gầm xe, phản ánh đúng **"Diện tích mặt đường bị đám đông phương tiện chiếm dụng"**!
+     - Khi đường đông / ùn tắc / kẹt cứng (các xe máy đi sát nhau): `MORPH_CLOSE (5x5)` tự động lấp đầy các khe hở nhỏ giữa xe máy mà không làm thổi phồng `O_vis` lên `> 80%` khi xe vẫn đang thoát nhanh!
 2. **Trọng số Phối cảnh Tự động theo chiều dọc (`Auto Perspective Row Weighting`):**
    - Trong `FlowOccupancy.set_zone()`, hệ thống tự động tìm hàng cao nhất $y_{min}$ (xa camera nhất) và hàng thấp nhất $y_{max}$ (gần camera nhất) của `zone_mask_small`, và khởi tạo mảng trọng số hàng dọc $w(y)$ giảm tuyến tính từ **`2.2` (ở đỉnh xa $y_{min}$)** xuống **`0.8` (ở đáy gần $y_{max}$)**:
      $$w(y) = 2.2 - 1.4 \times \frac{y - y_{min}}{\max(1,\; y_{max} - y_{min})}$$

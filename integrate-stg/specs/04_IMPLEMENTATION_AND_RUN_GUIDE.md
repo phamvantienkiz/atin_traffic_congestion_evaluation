@@ -83,6 +83,13 @@ BBOX_AI_MODULE=PLATE
 EVENT_PUBLISH_MODE=NONE
 MODEL_PATH=models/vehicle_n_best.pt
 DEVICE=cuda:0
+AI_TARGET_FPS=25.0
+RTSP_BACKEND=auto
+TRACK_ACTIVATION_CONF=0.25
+BBOX_PUBLISH_INTERVAL=0.1
+V_CONGESTED_MACRO=14.0
+V_CONGESTED_MAX=18.0
+EXIT_CLEAR_S=10.0
 FORCE_LOCAL_ROI=false
 FALLBACK_ROI_POINTS=[{"x":0.0247,"y":0.5172},{"x":0.4374,"y":0.3009},{"x":0.8836,"y":0.3574},{"x":0.9065,"y":0.884}]
 ```
@@ -166,8 +173,11 @@ uv run --project poc/backend --no-sync python integrate-stg/run_staging.py
 [INFO] main: [ORCHESTRATOR] Kết nối MQTT aioc-stg.atin.vn:443 ...
 [INFO] main: [MQTT CONNECTED] rc=0 -> Subscribing camera & zone topics (C01)...
 [INFO] main: [C02] Camera 'camera_junction' (id=..., org=...) đã bật PLATE -> Khởi tạo Worker...
-[INFO] main: [STATS cam=camera_junction] state=CLEAR | FPS=15.0 | Infer=16.5ms | BBoxSent=50 | EvLogged=0 | EvPub=0
+[INFO] ai.ingestion.stream_reader: [camera_junction] Connected via FFmpeg CUDA (h264_cuvid 1280x720)
+[INFO] main: [STATS cam=camera_junction] state=CLEAR | FPS=24.8 | Infer=15.2ms | BBoxSent=124 | EvLogged=0 | EvPub=0
 ```
+
+> **Kiểm tra nhanh FFmpeg NVDEC nếu cần:** Nếu không thấy dòng `Connected via FFmpeg CUDA`, test trực tiếp bằng `ffmpeg -hide_banner -loglevel info -rtsp_transport tcp -fflags nobuffer -flags low_delay -hwaccel cuda -c:v h264_cuvid -resize 1280x720 -i "<RTSP_URL>" -frames:v 5 -f null -` (StreamReader sẽ tự fallback sang `hevc_cuvid` $\rightarrow$ `ffmpeg_cpu` $\rightarrow$ `OpenCV` nếu NVDEC không khả dụng; có thể ép `RTSP_BACKEND=opencv` trong `.env` để debug).
 
 - **Thoát `tmux` nhưng vẫn giữ chạy ngầm:** bấm **`Ctrl + B`**, thả tay, rồi bấm **`D`**.
 - **Xem lại log sau khi đóng/mở lại Termius:**
