@@ -39,7 +39,6 @@ export class CameraCard {
         <div class="hud-overlay">
           <div class="hud-row hud-top">
             <span class="state-badge">MẤT TÍN HIỆU</span>
-            <span class="hud-conf">Tin cậy: <strong class="m-conf">–</strong></span>
           </div>
           <div class="hud-row">Độ phủ: <strong class="m-ovis">–</strong> · Dòng xe: <strong class="m-flow">–</strong></div>
           <div class="hud-row">Trong vùng: <strong class="m-2w">–</strong> xe máy · <strong class="m-4w">–</strong> ô tô</div>
@@ -112,12 +111,10 @@ export class CameraCard {
       : meta.label;
 
     const m = res.metrics || {};
-    const conf = res.state_conf ?? m.state_conf;
-    this.el.querySelector('.m-conf').textContent = conf != null ? `${Math.round(Number(conf) * 100)}%` : '–';
     this.el.querySelector('.m-2w').textContent = m.n_2w ?? '–';
     this.el.querySelector('.m-4w').textContent = m.n_4w ?? '–';
     this.el.querySelector('.m-ovis').textContent = m.o_vis != null ? `${Math.round(m.o_vis * 100)}%` : '–';
-    this.el.querySelector('.m-flow').textContent = m.v_flow != null ? Number(m.v_flow).toFixed(1) : '–';
+    this.el.querySelector('.m-flow').textContent = m.v_flow != null ? `${Number(m.v_flow).toFixed(1)} px/s` : '–';
     this.el.querySelector('.m-t4').textContent = fmt(m.t50_4w);
     this.el.querySelector('.m-t2').textContent = fmt(m.t50_2w);
     this.el.querySelector('.m-d4').textContent = fmt(m.d85_4w);

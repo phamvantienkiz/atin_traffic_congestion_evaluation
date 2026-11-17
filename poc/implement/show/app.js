@@ -56,83 +56,141 @@ document.addEventListener('keydown', (e) => {
   } else if (e.key >= '1' && e.key <= '9') {
     const idx = Number(e.key) - 1;
     if (idx < slides.length) goToSlide(idx);
+  } else if (e.key === '0' && slides.length >= 10) {
+    goToSlide(9);
   }
 });
 
-// Exact Python classify() logic from poc/backend/ai/decision/classifier.py
-const inW = document.getElementById('in-w');
+// Exact Python classify() V2 logic from poc/backend/ai/decision/classifier.py & config.py
 const inO = document.getElementById('in-o');
 const inV = document.getElementById('in-v');
 const inT4 = document.getElementById('in-t4');
 const inD4 = document.getElementById('in-d4');
 const inT2 = document.getElementById('in-t2');
+const inW = document.getElementById('in-w');
 const presetBtns = Array.from(document.querySelectorAll('.preset-btn'));
 
 const PRESETS = {
-  clear_fast: { w: 20.0, o: 45, v: 8.5, t4: 2.2, d4: 0, t2: 1.8, n2: 6, n4: 4 },
-  night_parked: { w: 3.0, o: 12, v: 0.2, t4: 0, d4: 12, t2: 0, n2: 0, n4: 1 },
-  congested: { w: 28.0, o: 60, v: 3.2, t4: 6.0, d4: 8.5, t2: 5.0, n2: 8, n4: 5 },
-  gridlocked: { w: 42.0, o: 76, v: 0.4, t4: 11.0, d4: 16.0, t2: 8.5, n2: 12, n4: 8 },
-  rescue: { w: 30.0, o: 84, v: 0.5, t4: 0, d4: 0, t2: 0, n2: 6, n4: 5 },
+  clear_fast: { o: 55, v: 18.0, t4: 4.8, d4: 0, t2: 3.8, w: 20, n2: 8, n4: 4 },
+  night_glare: { o: 80, v: 2.0, t4: 0, d4: 0, t2: 0, w: 0, n2: 0, n4: 0 },
+  congested: { o: 78, v: 14.0, t4: 10.5, d4: 0, t2: 8.0, w: 20, n2: 8, n4: 4 },
+  local_stall: { o: 55, v: 8.0, t4: 0, d4: 22.0, t2: 0, w: 12, n2: 0, n4: 4 },
+  gridlocked: { o: 88, v: 4.5, t4: 0, d4: 24.0, t2: 0, w: 30, n2: 15, n4: 5 },
+  macro_only: { o: 88, v: 4.0, t4: 0, d4: 0, t2: 0, w: 6, n2: 0, n4: 2 },
 };
-let simN2 = 6;
+
+let simN2 = 8;
 let simN4 = 4;
 
 function runClassify(m) {
   const gt = (x, th) => x !== null && x > th;
-  if (m.w < 18.0 && m.o < 0.40) {
-    return { state: 'CLEAR', reason: 'W_total < 18.0 và O_vis < 40% (đường thoáng / ít xe).' };
+  const hasTime = [m.t2, m.t4, m.d2, m.d4].some((x) => x !== null);
+  const hasVehicles = m.w >= 3.0 || hasTime;
+
+  const timeClear =
+    hasTime &&
+    [
+      [m.t4, 5.5],
+      [m.d4, 6.5],
+      [m.t2, 4.5],
+      [m.d2, 5.0],
+    ].every(([x, th]) => x === null || x <= th);
+
+  const timeCongested =
+    gt(m.t4, 5.5) || gt(m.d4, 6.5) || gt(m.t2, 4.5) || gt(m.d2, 5.0);
+
+  const timeGridlock =
+    gt(m.t4, 16.0) || gt(m.d4, 20.0) || gt(m.t2, 13.5) || gt(m.d2, 17.0);
+
+  // 1. Empty / clear road or no real vehicles (blocks night rain headlight glare)
+  if (m.o < 0.40 || !hasVehicles) {
+    const conf = Math.min(0.98, 0.85 + (m.v > 10.0 ? 0.10 : 0.0));
+    const why = !hasVehicles
+      ? 'W < 3.0 và chưa có T50/D85 → Sanity Gate chặn nhiễu đèn pha/nền.'
+      : 'Độ phủ O_vis < 40% (đường thoáng).';
+    return { state: 'CLEAR', conf: Number(conf.toFixed(2)), reason: why };
   }
-  const denseG = m.w >= 38.0 || m.o >= 0.72;
-  const stall4w = gt(m.t4, 9.0) || gt(m.d4, 14.0);
-  const stall2w = gt(m.t2, 7.5) || gt(m.d2, 12.0);
-  const timeOk = m.n4 < 2 ? (gt(m.t2, 8.5) || gt(m.d2, 13.0)) : (stall4w && (stall2w || m.n2 === 0));
-  const macroOk = m.v <= 1.0 || m.o >= 0.75;
-  if (denseG && timeOk && macroOk) {
-    return { state: 'GRIDLOCKED', reason: 'Mật độ cao (W ≥ 38 hoặc Phủ ≥ 72%) + dừng lâu (T50/D85) + V_flow ≤ 1.0 (hoặc Phủ ≥ 75%).' };
+
+  // 2. GRIDLOCKED
+  if (m.o >= 0.85) {
+    if ((timeGridlock && m.v <= 15.0) || (!hasTime && m.v <= 6.0)) {
+      const conf = Math.min(
+        0.98,
+        0.75 + (timeGridlock ? 0.13 : 0.0) + (m.w >= 24.0 ? 0.10 : 0.0)
+      );
+      const why = timeGridlock
+        ? 'O_vis ≥ 85%, V_flow ≤ 15 px/s kèm T50/D85 vượt ngưỡng kẹt (>16s/20s 4B).'
+        : 'O_vis ≥ 85%, V_flow ≤ 6.0 px/s (nhánh Macro-only khi mất T50/D85).';
+      return { state: 'GRIDLOCKED', conf: Number(conf.toFixed(2)), reason: why };
+    }
   }
-  if (m.o >= 0.80 && m.v <= 1.0 && m.w >= 28.0) {
-    return { state: 'GRIDLOCKED', reason: 'Nhánh Macro Rescue: Phủ ≥ 80%, V_flow ≤ 1.0 và W ≥ 28.0 (bù gãy track ByteTrack).' };
+
+  // 3. CONGESTED
+  if (m.o >= 0.70) {
+    if ((timeCongested && m.v <= 25.0) || (!hasTime && m.v <= 18.0)) {
+      const conf = Math.min(
+        0.98,
+        0.72 + (timeCongested ? 0.14 : 0.0) + (m.w >= 15.0 ? 0.10 : 0.0)
+      );
+      const why = timeCongested
+        ? 'O_vis ≥ 70%, V_flow ≤ 25 px/s kèm T50/D85 vượt ngưỡng chậm (>5.5s/6.5s 4B).'
+        : 'O_vis ≥ 70%, V_flow ≤ 18.0 px/s (nhánh Macro-only khi mất T50/D85).';
+      return { state: 'CONGESTED', conf: Number(conf.toFixed(2)), reason: why };
+    }
+  } else if (timeGridlock && m.v <= 15.0) {
+    return {
+      state: 'CONGESTED',
+      conf: 0.82,
+      reason: '40% ≤ O_vis < 70% nhưng T50/D85 vượt ngưỡng kẹt nặng & Flow ≤ 15 px/s (kẹt cục bộ).',
+    };
   }
-  const denseC = m.w >= 25.0 || m.o >= 0.55;
-  const slow = gt(m.t4, 5.0) || gt(m.d4, 7.5) || gt(m.t2, 4.5) || gt(m.d2, 7.0) || (m.v > 1.0 && m.v < 6.0 && m.o >= 0.55);
-  if (denseC && slow) {
-    return { state: 'CONGESTED', reason: 'Mật độ đông (W ≥ 25 hoặc Phủ ≥ 55%) kèm di chuyển chậm (T50/D85 hoặc V_flow 1–6).' };
-  }
-  return { state: 'CLEAR', reason: 'Có xe trong vùng nhưng tốc độ thoát tốt, chưa thỏa điều kiện ùn tắc.' };
+
+  // 4. CLEAR (busy road moving smoothly)
+  const conf = Math.min(
+    0.98,
+    0.75 + (timeClear ? 0.12 : 0.0) + (m.v >= 10.0 ? 0.08 : 0.0)
+  );
+  return {
+    state: 'CLEAR',
+    conf: Number(conf.toFixed(2)),
+    reason: 'Đông xe nhưng lưu thông ổn định (T50/D85 nhanh hoặc V_flow cao).',
+  };
 }
 
 function updateSim() {
-  if (!inW) return;
-  const w = Number(inW.value);
+  if (!inO) return;
   const oPct = Number(inO.value);
   const v = Number(inV.value);
   const t4 = Number(inT4.value) || null;
   const d4 = Number(inD4.value) || null;
   const t2 = Number(inT2.value) || null;
-  const d2 = d4 ? Math.max(0, d4 - 2.0) : null;
+  const w = Number(inW.value);
+  const d2 = d4 ? Math.max(0, d4 - 3.0) : null;
 
-  document.getElementById('val-w').textContent = w.toFixed(1);
   document.getElementById('val-o').textContent = `${oPct}%`;
   document.getElementById('val-v').textContent = v.toFixed(1);
   document.getElementById('val-t4').textContent = t4 ? `${t4.toFixed(1)}s` : '–';
   document.getElementById('val-d4').textContent = d4 ? `${d4.toFixed(1)}s` : '–';
   document.getElementById('val-t2').textContent = t2 ? `${t2.toFixed(1)}s` : '–';
+  document.getElementById('val-w').textContent = w.toFixed(1);
 
-  const res = runClassify({ w, o: oPct / 100, v, t4, d4, t2, d2, n2: simN2, n4: simN4 });
+  const res = runClassify({ w, o: oPct / 100, v, t4, d4, t2, d2 });
   const badge = document.getElementById('mock-badge');
-  const labels = { CLEAR: ['THÔNG THOÁNG', '#1FA63A'], CONGESTED: ['ÙN Ứ', '#FF8A1F'], GRIDLOCKED: ['KẸT CỨNG', '#E5483D'] };
+  const labels = {
+    CLEAR: ['THÔNG THOÁNG', '#1FA63A'],
+    CONGESTED: ['ÙN TẮC', '#FF8A1F'],
+    GRIDLOCKED: ['KẸT CỨNG', '#E5483D'],
+  };
   const [lbl, col] = labels[res.state];
   badge.textContent = lbl;
   badge.style.background = col;
 
-  document.getElementById('sim-reason').innerHTML = `Nhánh kích hoạt: <strong>${res.state}</strong> — ${res.reason}`;
-  document.getElementById('m-w').textContent = w.toFixed(1);
-  document.getElementById('m-2w').textContent = simN2;
-  document.getElementById('m-4w').textContent = simN4;
-  document.getElementById('mock-counts').textContent = `2B: ${simN2} · 4B: ${simN4}`;
+  const confPct = `${Math.round(res.conf * 100)}%`;
+  document.getElementById('m-conf').textContent = confPct;
+  document.getElementById('sim-reason').innerHTML = `Nhánh kích hoạt: <strong>${res.state} (${confPct})</strong> — ${res.reason}`;
+  document.getElementById('mock-counts').textContent = `${simN2} xe máy · ${simN4} ô tô`;
   document.getElementById('m-o').textContent = `${oPct}%`;
-  document.getElementById('m-v').textContent = v.toFixed(1);
+  document.getElementById('m-v').textContent = `${v.toFixed(1)} px/s`;
   document.getElementById('m-t4').textContent = t4 ? `${t4.toFixed(1)}s` : '–';
   document.getElementById('m-t2').textContent = t2 ? `${t2.toFixed(1)}s` : '–';
   document.getElementById('m-d4').textContent = d4 ? `${d4.toFixed(1)}s` : '–';
@@ -144,19 +202,19 @@ presetBtns.forEach((btn) => {
     presetBtns.forEach((b) => b.classList.remove('active'));
     btn.classList.add('active');
     const p = PRESETS[btn.dataset.preset];
-    inW.value = p.w;
     inO.value = p.o;
     inV.value = p.v;
     inT4.value = p.t4;
     inD4.value = p.d4;
     inT2.value = p.t2;
+    inW.value = p.w;
     simN2 = p.n2;
     simN4 = p.n4;
     updateSim();
   });
 });
 
-[inW, inO, inV, inT4, inD4, inT2].forEach((el) => {
+[inO, inV, inT4, inD4, inT2, inW].forEach((el) => {
   if (!el) return;
   el.addEventListener('input', () => {
     presetBtns.forEach((b) => b.classList.remove('active'));

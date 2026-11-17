@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PoC Phase 1 — Hệ thống Đánh giá Mức độ Ùn tắc Giao thông</title>
+  <title>PoC Phase 1 (V2) — Hệ thống Đánh giá Mức độ Ùn tắc Giao thông</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -12,10 +12,10 @@
       <div class="brand">
         <span class="brand-dot"></span>
         <span>ATIN · PoC Đánh giá Ùn tắc Giao thông</span>
-        <span class="brand-sub">· Phase 1 Demo</span>
+        <span class="brand-sub">· Phase 1 (V2)</span>
       </div>
       <div class="deck-controls">
-        <span id="progress-pill" class="progress-pill">01 / 09</span>
+        <span id="progress-pill" class="progress-pill">01 / 10</span>
         <button type="button" class="btn-ctrl" id="btn-prev" title="Slide trước (←)">← Trước</button>
         <button type="button" class="btn-ctrl" id="btn-next" title="Slide tiếp (→)">Tiếp →</button>
         <button type="button" class="btn-ctrl" id="btn-mode">Tỷ lệ 16:9</button>
@@ -32,13 +32,14 @@
         <button type="button" class="slide-pill" data-target="slide-3">3. Phương án 1 (Vi mô)</button>
         <button type="button" class="slide-pill" data-target="slide-4">4. Phương án 2 (Vĩ mô)</button>
         <button type="button" class="slide-pill" data-target="slide-5">5. Cách bổ trợ nhau</button>
-        <button type="button" class="slide-pill" data-target="slide-6">6. Chỉ số &amp; Ngưỡng</button>
-        <button type="button" class="slide-pill" data-target="slide-7">7. Mô phỏng</button>
-        <button type="button" class="slide-pill" data-target="slide-8">8. Che khuất &amp; State</button>
-        <button type="button" class="slide-pill" data-target="slide-9">9. Kết quả &amp; Vá lỗi</button>
+        <button type="button" class="slide-pill" data-target="slide-6">6. Bảng Ngưỡng V2</button>
+        <button type="button" class="slide-pill" data-target="slide-7">7. Mô phỏng V2</button>
+        <button type="button" class="slide-pill" data-target="slide-8">8. Kịch bản &amp; Edge Case</button>
+        <button type="button" class="slide-pill" data-target="slide-9">9. Che khuất &amp; Sự kiện</button>
+        <button type="button" class="slide-pill" data-target="slide-10">10. Kết quả &amp; Vá lỗi</button>
       </nav>
       <div class="sidebar-hint">
-        Phím tắt: <strong>← / →</strong> chuyển slide, hoặc phím <strong>1–9</strong> để nhảy nhanh.
+        Phím tắt: <strong>← / →</strong> chuyển slide, hoặc phím <strong>1–9, 0</strong> để nhảy nhanh.
       </div>
     </aside>
 
@@ -47,10 +48,10 @@
       <section id="slide-1" class="slide" aria-labelledby="s1-title">
         <div class="slide-head">
           <div>
-            <div class="slide-kicker">ATIN Company · PoC Phase 1 Solution Overview</div>
+            <div class="slide-kicker">ATIN Company · PoC Phase 1 (V2) Solution Overview</div>
             <h1 id="s1-title" class="slide-title">Tổng quan Giải pháp Đánh giá Ùn tắc</h1>
           </div>
-          <span class="slide-num">01 / 09</span>
+          <span class="slide-num">01 / 10</span>
         </div>
 
         <div class="slide-body">
@@ -58,14 +59,15 @@
             <div>
               <div class="preset-row" style="margin-bottom: 12px;">
                 <span class="state-pill st-clear"><span class="dot dot-green"></span>CLEAR · Thông thoáng</span>
-                <span class="state-pill st-congested"><span class="dot dot-orange"></span>CONGESTED · Ùn ứ</span>
+                <span class="state-pill st-congested"><span class="dot dot-orange"></span>CONGESTED · Ùn tắc</span>
                 <span class="state-pill st-gridlocked"><span class="dot dot-red"></span>GRIDLOCKED · Kẹt cứng</span>
               </div>
               <h2 class="cover-title">Phân biệt xe đông chạy nhanh với xe kẹt cứng tại chỗ.</h2>
               <p class="cover-sub">
-                Đếm xe đơn thuần dễ báo nhầm khi đường đông nhưng thoát nhanh, hoặc khi xe tải/xe buýt che khuất camera.
-                Hệ thống PoC kết hợp đồng thời <strong>Phương án 1</strong> (theo dõi quỹ đạo &amp; thời gian trong Poly Zone)
-                và <strong>Phương án 2</strong> (độ phủ thị giác MOG2 + vận tốc dòng chảy Farneback).
+                Thay vì dùng ngưỡng cứng đếm xe <code class="mono">W</code> dễ sai lệch theo kích thước vùng vẽ,
+                hệ thống V2 kết hợp <strong>3 trụ cột</strong>: <strong>Độ phủ Phối cảnh (<code class="mono">O_vis</code>)</strong>,
+                <strong>Dòng chảy (<code class="mono">V_flow</code>)</strong> và <strong>Thời gian qua/lưu vùng (<code class="mono">T50 / D85</code>)</strong>
+                trên Poly Zone <code class="mono">18–22m</code>, kèm điểm tin cậy <code class="mono">state_conf</code> và chu kỳ sự kiện <code class="mono">3p → 5p → 15p</code>.
               </p>
             </div>
 
@@ -80,20 +82,20 @@
                 </div>
               </div>
               <div class="card-soft">
-                <div class="card-label"><span>Đầu vào chuẩn hóa</span></div>
-                <div><span class="hero-num" style="font-size:36px;">720p</span><span class="hero-unit">buffer = 1</span></div>
+                <div class="card-label"><span>Độ tin cậy trạng thái (state_conf)</span></div>
+                <div><span class="hero-num" style="font-size:34px;">0.55–0.98</span><span class="hero-unit">hợp nhất 3 trụ cột</span></div>
               </div>
               <div class="card-soft">
-                <div class="card-label"><span>Kiểm thử tự động</span></div>
-                <div><span class="hero-num" style="font-size:36px;">25/25</span><span class="hero-unit">passed</span></div>
+                <div class="card-label"><span>Kiểm thử tự động AI Pipeline</span></div>
+                <div><span class="hero-num" style="font-size:36px;">31/31</span><span class="hero-unit">passed</span></div>
               </div>
             </div>
           </div>
         </div>
 
         <div class="slide-foot">
-          <span>Phạm vi PoC: 1 tiến trình Python hợp nhất · Hỗ trợ tối đa 8 camera RTSP</span>
-          <span>01 / 09</span>
+          <span>Phạm vi PoC: 1 tiến trình Python hợp nhất · Hỗ trợ tối đa 8 camera RTSP · Không chỉnh ngưỡng riêng từng cam</span>
+          <span>01 / 10</span>
         </div>
       </section>
 
@@ -104,7 +106,7 @@
             <div class="slide-kicker">Kiến trúc triển khai thực tế · poc/backend + poc/frontend</div>
             <h2 id="s2-title" class="slide-title">Kiến trúc 1 Tiến trình &amp; Đường truyền Video H.265</h2>
           </div>
-          <span class="slide-num">02 / 09</span>
+          <span class="slide-num">02 / 10</span>
         </div>
 
         <div class="slide-body">
@@ -141,11 +143,11 @@
               <rect x="562" y="56" width="148" height="72" rx="12" fill="#EEF3FF" stroke="#D9E8FF"></rect>
               <text x="636" y="84" text-anchor="middle" font-size="13" font-weight="600" fill="#1545BD">GpuBatcher</text>
               <text x="636" y="102" text-anchor="middle" font-size="11.5" fill="#1F5FFF">YOLO Batch FP16</text>
-              <text x="636" y="117" text-anchor="middle" font-size="11" fill="#6B6B76">ROI crop + 10% lề</text>
+              <text x="636" y="117" text-anchor="middle" font-size="11" fill="#6B6B76">ROI flow_zone +10% lề</text>
 
               <rect x="734" y="56" width="138" height="72" rx="12" fill="#F6EEFD" stroke="#E6DDFB"></rect>
               <text x="803" y="84" text-anchor="middle" font-size="13" font-weight="600" fill="#831FB8">CameraProcessor</text>
-              <text x="803" y="102" text-anchor="middle" font-size="11.5" fill="#6B6B76">PA 1 + PA 2</text>
+              <text x="803" y="102" text-anchor="middle" font-size="11.5" fill="#6B6B76">PA 1 + PA 2 (V2)</text>
               <text x="803" y="117" text-anchor="middle" font-size="11" fill="#6B6B76">Occlusion + State</text>
 
               <rect x="562" y="148" width="310" height="70" rx="12" fill="#F4F4F6" stroke="#EFEFF2"></rect>
@@ -154,8 +156,8 @@
 
               <rect x="928" y="78" width="176" height="92" rx="14" fill="#FFFFFF" stroke="#E9E9EE" stroke-width="1.5"></rect>
               <text x="1016" y="108" text-anchor="middle" font-size="14" font-weight="600" fill="#0B0B0F">Dashboard Web</text>
-              <text x="1016" y="129" text-anchor="middle" font-size="12" fill="#6B6B76">MJPEG + Canvas BBox</text>
-              <text x="1016" y="148" text-anchor="middle" font-size="11" fill="#9A9AA5">Vẽ Poly Zone · Sự kiện</text>
+              <text x="1016" y="129" text-anchor="middle" font-size="12" fill="#6B6B76">HUD góc trên trái</text>
+              <text x="1016" y="148" text-anchor="middle" font-size="11" fill="#9A9AA5">Poly Zone · Sự kiện V2</text>
 
               <line x1="156" y1="120" x2="192" y2="120" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arrow)"></line>
               <line x1="340" y1="92" x2="388" y2="92" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arrow)"></line>
@@ -187,121 +189,119 @@
         </div>
 
         <div class="slide-foot">
-          <span>Tệp nguồn: poc/backend/main.py · poc/backend/mediamtx.py · poc/backend/ai/engine/</span>
-          <span>02 / 09</span>
+          <span>Tệp nguồn: poc/backend/main.py · poc/backend/ai/engine/ · poc/frontend/js/camera-card.js</span>
+          <span>02 / 10</span>
         </div>
       </section>
 
-      <!-- SLIDE 3: OPTION 1 DEDICATED (PLAIN LANGUAGE) -->
+      <!-- SLIDE 3: OPTION 1 DEDICATED -->
       <section id="slide-3" class="slide" aria-labelledby="s3-title">
         <div class="slide-head">
           <div>
             <div class="slide-kicker">Phương án 1 · Phân tích vi mô theo từng phương tiện (<code class="mono">core_pipeline</code>)</div>
             <h2 id="s3-title" class="slide-title">Phương án 1: Theo dõi từng xe &amp; Đo thời gian kẹt</h2>
           </div>
-          <span class="slide-num">03 / 09</span>
+          <span class="slide-num">03 / 10</span>
         </div>
 
         <div class="slide-body">
           <div class="grid-2">
             <div class="card-soft">
-              <div class="card-label"><span>Bước 1 · Detector (YOLO cắt đúng vùng xem)</span><span class="state-pill st-blue">Nhận diện xe</span></div>
-              <div class="title-md">Chỉ nhìn vùng đường cần đo, không nhìn lan man</div>
+              <div class="card-label"><span>Bước 1 · Detector (YOLO cắt ROI mở rộng)</span><span class="state-pill st-blue">conf ≥ 0.15</span></div>
+              <div class="title-md">Nhìn tập trung vùng đo, không bỏ sót xe máy</div>
               <p class="body-txt">
-                Thay vì đưa cả khung hình rộng vào AI, hệ thống <strong>cắt riêng khung chữ nhật quanh vùng đo mở rộng (<code class="mono">flow_zone_px</code> +10% lề)</strong>.
-                Cách này giúp xe ở xa trông to rõ hơn và loại bỏ xe đỗ trên vỉa hè hoặc làn đối diện.
-                Ngưỡng phát hiện đặt thấp (<code class="mono">conf=0.15</code>) để không bỏ sót xe máy đi chen sát nhau.
+                Hệ thống cắt riêng khung chữ nhật quanh <code class="mono">flow_zone_px</code> (+10% lề <code class="mono">ROI_PADDING</code>).
+                Toàn bộ <code class="mono">det.xyxy (conf ≥ 0.15)</code> được đưa thẳng vào tính độ phủ <code class="mono">O_vis</code> để giữ cả xe máy chen sát nhau mà tracker chưa kịp kích hoạt.
               </p>
             </div>
 
             <div class="card-soft">
-              <div class="card-label"><span>Bước 2 · Tracker (ByteTrack + Bầu chọn nhãn)</span><span class="state-pill st-blue">Gắn ID xuyên suốt</span></div>
-              <div class="title-md">Nhớ mặt từng chiếc xe từ lúc vào đến lúc ra</div>
+              <div class="card-label"><span>Bước 2 · Tracker (ByteTrack + Majority Vote)</span><span class="state-pill st-blue">Gắn ID</span></div>
+              <div class="title-md">Nhớ từng xe từ lúc vào đến lúc thoát zone</div>
               <p class="body-txt">
-                ByteTrack cấp cho mỗi xe một <strong>mã ID cố định</strong> để đo được chiếc xe đó đã nằm trong vùng bao lâu.
-                Nếu xe bị khuất nhẹ trong ~2.5 giây vẫn giữ được ID cũ. Ngoài ra, hệ thống <strong>cộng dồn độ tin cậy qua nhiều khung hình</strong> (bầu chọn đa số) để nhãn xe không bị nhảy chập chờn giữa ô tô con và xe tải.
+                ByteTrack kích hoạt track tại <code class="mono">conf ≥ 0.45</code>, giữ dấu khi khuất nhẹ trong <code class="mono">2.5s</code> (<code class="mono">TRACK_BUFFER_S</code>),
+                và cộng dồn độ tin cậy qua nhiều frame để nhãn xe (<code class="mono">motobike / car / bus / truck</code>) không bị nhảy chập chờn.
               </p>
             </div>
 
             <div class="card-soft">
-              <div class="card-label"><span>Bước 3 · Điểm chân &amp; Quy đổi trọng số (W)</span><span class="state-pill st-blue">Đo mật độ thực</span></div>
-              <div class="title-md">1 xe buýt choán chỗ bằng 6 xe máy</div>
+              <div class="card-label"><span>Bước 3 · Điểm chân &amp; Vai trò mới của Trọng số W</span><span class="state-pill st-blue">Sanity Gate &amp; Bonus</span></div>
+              <div class="title-md">Bỏ ngưỡng cứng W, dùng để lọc nhiễu &amp; cộng điểm tự tin</div>
               <p class="body-txt">
-                Hệ thống lấy <strong>điểm đáy giữa khung xe (bánh xe chạm đất)</strong> để xét xe đã vào Poly Zone hay chưa, tránh trường hợp nóc xe cao bị tính nhầm sang làn khác.
-                Sau đó quy đổi theo độ chiếm chỗ: <strong>xe máy = 1, ô tô = 3, xe buýt/tải = 6</strong> rồi cộng lại thành chỉ số <strong>W</strong>.
+                Lấy điểm đáy giữa (<code class="mono">foot</code>) xét xe vào Poly Zone gốc (<code class="mono">18–22m</code>), quy đổi <code class="mono">W</code> (<code class="mono">2B=1, ô tô=3, buýt/tải=6</code>).
+                V2 <strong>ẩn W khỏi UI</strong> và dùng <code class="mono">W_SANITY_MIN = 3.0</code> để chặn báo giả đèn pha đêm mưa, kích <code class="mono">MOG2 Freeze</code> và thưởng <code class="mono">state_conf</code>.
               </p>
             </div>
 
             <div class="card-soft">
-              <div class="card-label"><span>Bước 4 · Đo thời gian qua vùng (T50 &amp; D85)</span><span class="state-pill st-blue">Phân biệt đi vs. đứng</span></div>
-              <div class="title-md">Đo cả xe đã thoát qua lẫn xe đang kẹt tại chỗ</div>
+              <div class="card-label"><span>Bước 4 · Đo thời gian T50 &amp; D85 (Cửa sổ 30s)</span><span class="state-pill st-blue">Trọng tài phân xử</span></div>
+              <div class="title-md">Phân xử chính xác vùng Flow chồng lấp 10–25 px/s</div>
               <p class="body-txt">
-                <strong>T50</strong> là thời gian trung bình để xe đi <em>xuyên qua</em> vùng (lọc bỏ các đoạn track ngắn bị đứt giữa chừng).
-                Còn khi đường tắc cứng đến mức chưa có xe nào thoát ra được, <strong>D85</strong> sẽ đo xem các xe <em>đang mắc kẹt bên trong</em> đã đứng im bao lâu.
+                <strong>T50</strong> là trung vị thời gian xe đi qua ≥ 45% chiều dài zone (cửa sổ <code class="mono">30s</code>, cần <code class="mono">≥ 2</code> mẫu).
+                <strong>D85</strong> là phân vị 85 thời gian lưu của các xe <em>đang kẹt bên trong</em> (<code class="mono">≥ 2</code> xe nằm <code class="mono">≥ 2.0s</code>).
               </p>
             </div>
           </div>
         </div>
 
         <div class="slide-foot">
-          <span>Tóm tắt PA1: Biết chính xác có bao nhiêu 2B/4B trong vùng và mỗi xe đang di chuyển nhanh hay đứng im bao lâu.</span>
-          <span>03 / 09</span>
+          <span>Tóm tắt PA1: T50 / D85 là trọng tài phân biệt "đông chạy được" vs "ùn tắc", còn W xác thực có xe thật.</span>
+          <span>03 / 10</span>
         </div>
       </section>
 
-      <!-- SLIDE 4: OPTION 2 DEDICATED (PLAIN LANGUAGE) -->
+      <!-- SLIDE 4: OPTION 2 DEDICATED (UPDATED WITH RAIL-ALIGNED + MORPH_CLOSE + PERSPECTIVE) -->
       <section id="slide-4" class="slide" aria-labelledby="s4-title">
         <div class="slide-head">
           <div>
-            <div class="slide-kicker">Phương án 2 · Phân tích vĩ mô toàn vùng (<code class="mono">aux_pipeline</code>)</div>
-            <h2 id="s4-title" class="slide-title">Phương án 2: Nhìn toàn cảnh Độ phủ &amp; Dòng chảy</h2>
+            <div class="slide-kicker">Phương án 2 · Phân tích vĩ mô (<code class="mono">aux_pipeline/flow_occupancy.py</code> + <code class="mono">geometry.py</code>)</div>
+            <h2 id="s4-title" class="slide-title">Phương án 2: Chuẩn hóa Độ phủ O_vis &amp; Dòng chảy</h2>
           </div>
-          <span class="slide-num">04 / 09</span>
+          <span class="slide-num">04 / 10</span>
         </div>
 
         <div class="slide-body">
           <div class="grid-2">
             <div class="card-soft">
-              <div class="card-label"><span>Bước 1 · Thu nhỏ khung hình 320×180</span><span class="state-pill st-purple">Siêu nhẹ CPU</span></div>
-              <div class="title-md">Không cần nhận diện từng xe, chỉ nhìn mảng tổng thể</div>
+              <div class="card-label"><span>Bước 1 · Vùng đo Rail-Aligned +20%</span><span class="state-pill st-purple">geometry.py</span></div>
+              <div class="title-md">Mở rộng +20% trượt dọc 2 cạnh lề đường</div>
               <p class="body-txt">
-                Thay vì cố tách từng chiếc xe khi chúng dính chùm vào nhau, Phương án 2 thu nhỏ ảnh về <strong>320×180</strong>.
-                Ở kích thước này, các phép toán xử lý ảnh chạy cực nhanh trên CPU (~1–2 ms/camera) mà vẫn giữ nguyên bức tranh toàn cảnh mặt đường.
+                Thay vì chiếu 1 vector trung bình gây xoắn đa giác trên camera góc chéo, <code class="mono">extend_zone_longitudinal</code> tự chọn 2 cạnh dốc hơn làm 2 mép lề đường rồi kéo dài 2 đầu trên/dưới thêm <strong>+20%</strong> bám sát vỉa hè.
               </p>
             </div>
 
             <div class="card-soft">
-              <div class="card-label"><span>Bước 2 · Tách nền MOG2 + Hợp nhất BBox (Phủ)</span><span class="state-pill st-purple">Đo độ đặc kín</span></div>
-              <div class="title-md">Mặt đường đang bị xe che kín bao nhiêu phần trăm?</div>
+              <div class="card-label"><span>Bước 2 · MOG2 (16, lr=0.002) + MORPH_CLOSE (9×7)</span><span class="state-pill st-purple">Lấp khe hở xe máy</span></div>
+              <div class="title-md">Hợp nhất toàn bộ det.xyxy + MOG2 trên 320×180</div>
               <p class="body-txt">
-                Thuật toán <strong>MOG2</strong> học nền đường trống theo thời gian và tự loại bỏ bóng nắng/bóng xe.
-                Sau đó lấy phần hợp giữa mảng xe của MOG2 và các khung xe YOLO trên vùng <strong><code class="mono">flow_zone_px</code></strong> (kéo giãn +20% dọc trục đường ở cả 2 đầu trên/dưới, giữ nguyên bề ngang) để tính độ phủ <strong>Phủ / O_vis</strong> (0–100%).
+                Hạ <code class="mono">varThreshold=16</code> và <code class="mono">lr=0.002</code> để bắt xe tối màu và tránh hòa tan xe chạy chậm.
+                Gộp <code class="mono">fg | mask_yolo</code> rồi chạy <code class="mono">MORPH_CLOSE</code> elip <code class="mono">(9, 7)</code> để lấp khe hở nhỏ giữa tay lái/bánh xe máy đi sát nhau.
               </p>
             </div>
 
             <div class="card-soft">
-              <div class="card-label"><span>Bước 3 · Đóng băng học nền (MOG2 Freeze)</span><span class="state-pill st-purple">Chống "tàng hình" xe</span></div>
-              <div class="title-md">Giữ nguyên dấu vết khi xe kẹt đứng yên quá lâu</div>
+              <div class="card-label"><span>Bước 3 · Trọng số Phối cảnh Tự động (2.2 → 0.8)</span><span class="state-pill st-purple">Đa camera</span></div>
+              <div class="title-md">Cân bằng xe ở xa và xe ở sát ống kính</div>
               <p class="body-txt">
-                Nhược điểm cố hữu của tách nền tự động là: nếu một chiếc xe đứng im quá lâu, hệ thống sẽ tưởng đó là... mặt đường trống và xóa mất.
-                Khi thấy dòng xe đứng yên và có xe kẹt &gt; 5 giây, hệ thống <strong>tạm khóa việc học nền</strong> để giữ nguyên hình hài đám đông đang kẹt.
+                Trong <code class="mono">set_zone()</code>, hệ thống tự tính trọng số theo hàng dọc từ <strong>2.2</strong> ở đỉnh xa (<code class="mono">y_min</code>) xuống <strong>0.8</strong> ở đáy gần (<code class="mono">y_max</code>).
+                Nhờ đó 30–40 xe ở nửa xa không bị 4–5 khoảng trống ở sát camera lấn át khi tính <code class="mono">O_vis</code>.
               </p>
             </div>
 
             <div class="card-soft">
-              <div class="card-label"><span>Bước 4 · Dòng chảy quang học (Farneback Flow)</span><span class="state-pill st-purple">Đo tốc độ trôi</span></div>
-              <div class="title-md">Cả đám đông đang trôi đi hay đang đứng chết?</div>
+              <div class="card-label"><span>Bước 4 · MOG2 Freeze &amp; Farneback Optical Flow</span><span class="state-pill st-purple">Đo tốc độ trôi</span></div>
+              <div class="title-md">Đóng băng nền không còn vòng lặp chết</div>
               <p class="body-txt">
-                Thuật toán <strong>Optical Flow</strong> so sánh 2 khung hình liên tiếp trên những vùng đang có xe, đo xem các điểm ảnh dịch chuyển trung bình bao nhiêu pixel mỗi giây (<strong>Flow / V_flow</strong>),
-                giúp phân biệt ngay dòng xe đông nhưng đang chạy với dòng xe đang đứng bánh.
+                Đo vận tốc dịch chuyển <code class="mono">V_flow (px/s)</code> trên vùng có xe (<code class="mono">occupied &gt; 0</code>, lọc nhiễu <code class="mono">&lt; 0.8 px</code>).
+                Khi <code class="mono">V_flow &lt; 6.0</code> và (<code class="mono">d85_max &gt; 5s</code> hoặc <code class="mono">W ≥ 3.0</code>), nền MOG2 lập tức đóng băng (<code class="mono">lr=0</code>).
               </p>
             </div>
           </div>
         </div>
 
         <div class="slide-foot">
-          <span>Tóm tắt PA2: Không phụ thuộc vào việc ByteTrack có giữ được ID hay không — luôn nhìn thấy độ kín và tốc độ dòng xe.</span>
-          <span>04 / 09</span>
+          <span>Kiểm chứng trên cam Bus Hoàng Văn Thụ (snapshot.jpg): O_vis tăng từ 22.16% (&lt;45% tổng) lên 54.84% (~58–64% video).</span>
+          <span>04 / 10</span>
         </div>
       </section>
 
@@ -309,302 +309,383 @@
       <section id="slide-5" class="slide" aria-labelledby="s5-title">
         <div class="slide-head">
           <div>
-            <div class="slide-kicker">Lý do phải kết hợp cả 2 phương án trong 1 bộ phân loại</div>
+            <div class="slide-kicker">Lý do phải kết hợp cả 2 phương án trong 1 bộ phân loại V2</div>
             <h2 id="s5-title" class="slide-title">Hai Phương án Bổ trợ cho Nhau như thế nào?</h2>
           </div>
-          <span class="slide-num">05 / 09</span>
+          <span class="slide-num">05 / 10</span>
         </div>
 
         <div class="slide-body">
           <div class="grid-3">
             <div class="card-white">
               <div class="card-label"><span>Tình huống 1</span><span class="state-pill st-clear">Tránh báo tắc giả</span></div>
-              <div class="title-md">Đường rất đông xe nhưng dòng xe thoát nhanh</div>
+              <div class="title-md">Đường rất đông nhưng dòng xe thoát nhanh</div>
               <p class="body-txt">
-                <strong>Điểm mù nếu chỉ đếm xe:</strong> Số lượng và mật độ <code class="mono">W</code> rất cao, dễ bị kết luận nhầm là ùn tắc.
+                <strong>Điểm mù nếu chỉ nhìn mật độ:</strong> Độ phủ <code class="mono">O_vis</code> lên tới <code class="mono">50–65%</code> dễ bị tưởng là đang ùn.
               </p>
               <p class="body-txt">
-                <strong>Cách 2 PA phối hợp:</strong> PA1 thấy thời gian đi qua vùng (<code class="mono">T50</code>) ngắn, PA2 thấy tốc độ dòng chảy (<code class="mono">Flow</code>) cao → Kết luận đúng là <strong>THÔNG THOÁNG</strong>.
-              </p>
-            </div>
-
-            <div class="card-white">
-              <div class="card-label"><span>Tình huống 2</span><span class="state-pill st-congested">Giữ dấu xe kẹt lâu</span></div>
-              <div class="title-md">Xe dừng chờ lâu hơn 5–10 giây</div>
-              <p class="body-txt">
-                <strong>Điểm mù nếu chỉ dùng MOG2 (PA2):</strong> Xe đứng yên lâu sẽ bị thuật toán nền học hòa thành mặt đường, làm chỉ số độ phủ tụt xuống ảo.
-              </p>
-              <p class="body-txt">
-                <strong>Cách 2 PA phối hợp:</strong> PA1 đo được thời gian xe nằm im (<code class="mono">D85 &gt; 5s</code>) và kết hợp với <code class="mono">Flow</code> thấp để ra lệnh <strong>đóng băng nền MOG2</strong>, giữ nguyên độ phủ thực tế.
+                <strong>Cách 2 PA phối hợp:</strong> PA1 thấy <code class="mono">T50 / D85</code> trong ngưỡng nhanh (<code class="mono">≤ 5.5s / 6.5s</code>), PA2 thấy <code class="mono">Flow ≥ 10 px/s</code> → Chốt <strong>CLEAR</strong>.
               </p>
             </div>
 
             <div class="card-white">
-              <div class="card-label"><span>Tình huống 3</span><span class="state-pill st-gridlocked">Cứu nguy đứt Track</span></div>
-              <div class="title-md">Xe xếp lớp đặc kín hoặc che khuất nặng</div>
+              <div class="card-label"><span>Tình huống 2</span><span class="state-pill st-congested">Giữ dấu xe kẹt</span></div>
+              <div class="title-md">Xe dừng chờ lâu hơn 5 giây hoặc nối đuôi chậm</div>
               <p class="body-txt">
-                <strong>Điểm mù nếu chỉ dùng Tracker (PA1):</strong> Xe máy len lỏi, xe lớn che nhau làm ByteTrack liên tục mất và tạo ID mới, khiến <code class="mono">T50/D85</code> bị trống.
+                <strong>Điểm mù nếu chỉ dùng MOG2:</strong> Xe đứng yên lâu sẽ bị thuật toán nền học hòa thành mặt đường, làm <code class="mono">O_vis</code> tụt giả tạo.
               </p>
               <p class="body-txt">
-                <strong>Cách 2 PA phối hợp:</strong> Nhánh <em>Macro Rescue</em> dùng PA2 thấy mặt đường kín đặc (<code class="mono">Phủ ≥ 80%</code>) và đứng im (<code class="mono">Flow ≤ 1</code>) → Vẫn chốt đúng <strong>KẸT CỨNG</strong>.
+                <strong>Cách 2 PA phối hợp:</strong> PA1 báo <code class="mono">D85 &gt; 5s</code> hoặc <code class="mono">W ≥ 3.0</code> cùng <code class="mono">Flow &lt; 6.0</code> → Khóa <code class="mono">lr = 0</code> để giữ nguyên <code class="mono">O_vis</code>.
+              </p>
+            </div>
+
+            <div class="card-white">
+              <div class="card-label"><span>Tình huống 3</span><span class="state-pill st-gridlocked">Macro-only Fallback</span></div>
+              <div class="title-md">Mất track / đứt ID hoàn toàn (<code class="mono">T50/D85 = None</code>)</div>
+              <p class="body-txt">
+                <strong>Điểm mù nếu chỉ dùng Tracker:</strong> Xe chen đặc hoặc camera góc khó khiến ByteTrack đứt ID liên tục, mất hết <code class="mono">T50 / D85</code>.
+              </p>
+              <p class="body-txt">
+                <strong>Cách 2 PA phối hợp:</strong> Tự chuyển sang nhánh <em>Macro-only</em>: <code class="mono">O_vis ≥ 85% &amp; Flow ≤ 6.0</code> → <strong>GRIDLOCKED</strong>; <code class="mono">O_vis ≥ 70% &amp; Flow ≤ 18.0</code> → <strong>CONGESTED</strong>.
               </p>
             </div>
           </div>
 
           <div class="card-soft" style="flex-direction: row; align-items: center; justify-content: space-between; padding: 14px 20px;">
             <div class="body-txt">
-              <strong>Nguyên tắc cốt lõi:</strong> Phương án 1 trả lời <em>"Xe loại gì, ở lại bao lâu?"</em> — Phương án 2 trả lời <em>"Mặt đường kín tới đâu, cả dòng có đang trôi không?"</em>. Chỉ khi cả hai đồng thuận mới chốt ùn tắc.
+              <strong>Nguyên tắc V2:</strong> <code class="mono">O_vis</code> đo mức độ kín mặt đường, <code class="mono">Flow</code> đo vận tốc tổng thể, <code class="mono">T50 / D85</code> phân xử vùng tốc độ giao thoa (<code class="mono">6–25 px/s</code>) và <code class="mono">W</code> xác thực có xe thật.
             </div>
           </div>
         </div>
 
         <div class="slide-foot">
-          <span>Sự kết hợp giúp hệ thống vừa chính xác ở góc camera thoáng, vừa bền bỉ khi giờ cao điểm đông đặc.</span>
-          <span>05 / 09</span>
+          <span>Khi có đủ cả O_vis + Flow + T50/D85 + W, độ tự tin state_conf được cộng thưởng lên tới 0.90–0.98.</span>
+          <span>05 / 10</span>
         </div>
       </section>
 
-      <!-- SLIDE 6: CAMERA CARD METRICS & THRESHOLD TABLE -->
+      <!-- SLIDE 6: CLEAR V2 THRESHOLD TABLE -->
       <section id="slide-6" class="slide" aria-labelledby="s6-title">
         <div class="slide-head">
           <div>
-            <div class="slide-kicker">Từ 2 Phương án → Các con số trên giao diện &amp; Ngưỡng kết luận</div>
-            <h2 id="s6-title" class="slide-title">Ý nghĩa Thông số trên Ô Camera &amp; Ngưỡng Quyết định</h2>
+            <div class="slide-kicker">Đối chiếu trực tiếp classifier.py &amp; config.py (V2)</div>
+            <h2 id="s6-title" class="slide-title">Bảng Ngưỡng Phân loại V2</h2>
           </div>
-          <span class="slide-num">06 / 09</span>
+          <span class="slide-num">06 / 10</span>
         </div>
 
         <div class="slide-body">
-          <div class="grid-asymmetric">
-            <div class="card-white" style="padding: 14px 16px;">
-              <div class="card-label"><span>Bảng ngưỡng phân loại (<code class="mono">classifier.py</code> &amp; <code class="mono">config.py</code>)</span></div>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="card-white" style="padding: 14px 18px;">
+              <div class="card-label" style="margin-bottom: 8px;"><span>1. Quy tắc phân loại 3 trạng thái (<code class="mono">CLEAR → CONGESTED → GRIDLOCKED</code>)</span></div>
               <table class="clean-table">
                 <thead>
                   <tr>
                     <th>Trạng thái</th>
-                    <th>Mật độ (<code class="mono">W_total</code> / <code class="mono">O_vis</code>)</th>
-                    <th>Thời gian (<code class="mono">T50</code> / <code class="mono">D85</code>)</th>
-                    <th>Dòng chảy (<code class="mono">V_flow</code>)</th>
+                    <th>Độ phủ (<code class="mono">O_vis</code>)</th>
+                    <th>Khi có <code class="mono">T50 / D85</code></th>
+                    <th>Khi mất <code class="mono">T50 / D85</code> (Macro-only)</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td><span class="state-pill st-clear">CLEAR</span></td>
-                    <td><code class="mono">W &lt; 18.0</code> và <code class="mono">O_vis &lt; 40%</code></td>
-                    <td>Hoặc chưa đạt ngưỡng chậm</td>
-                    <td>Thoát nhanh (<code class="mono">≥ 6.0</code>)</td>
+                    <td><span class="state-pill st-clear">CLEAR</span><br/><small style="color:var(--text-tertiary);">Thông thoáng</small></td>
+                    <td><code class="mono">&lt; 40%</code> (vắng)<br/>hoặc <code class="mono">40%–70%</code> (đông)</td>
+                    <td>Đường vắng (<code class="mono">&lt; 40%</code>), hoặc đông nhưng <code class="mono">T50/D85</code> dưới ngưỡng chậm &amp; <code class="mono">Flow ≥ 10.0 px/s</code></td>
+                    <td><code class="mono">O_vis &lt; 40%</code>, hoặc <code class="mono">Flow &gt; 18.0 px/s</code>,<br/>hoặc <strong>Cổng an toàn</strong> <code class="mono">W &lt; 3.0</code> (chặn chói đèn)</td>
                   </tr>
                   <tr>
-                    <td><span class="state-pill st-congested">CONGESTED</span></td>
-                    <td><code class="mono">W ≥ 25.0</code> hoặc <code class="mono">O_vis ≥ 55%</code></td>
-                    <td>4B: <code class="mono">T50 &gt; 5.0s</code> / <code class="mono">D85 &gt; 7.5s</code><br/>2B: <code class="mono">T50 &gt; 4.5s</code> / <code class="mono">D85 &gt; 7.0s</code></td>
-                    <td>Hoặc <code class="mono">1.0 &lt; V &lt; 6.0</code> khi <code class="mono">O_vis ≥ 55%</code></td>
+                    <td><span class="state-pill st-congested">CONGESTED</span><br/><small style="color:var(--text-tertiary);">Ùn tắc</small></td>
+                    <td><code class="mono">≥ 70%</code><br/><small>(hoặc <code class="mono">40–70%</code> kẹt cục bộ)</small></td>
+                    <td><code class="mono">Flow ≤ 25.0 px/s</code> + vượt <strong>Ngưỡng Chậm</strong><br/><small>(Nếu <code class="mono">40–70%</code>: cần vượt <strong>Ngưỡng Kẹt</strong> + <code class="mono">Flow ≤ 15.0</code>)</small></td>
+                    <td><code class="mono">Flow ≤ 18.0 px/s</code><br/>(<code class="mono">V_CONGESTED_MACRO</code>)</td>
                   </tr>
                   <tr>
-                    <td><span class="state-pill st-gridlocked">GRIDLOCKED</span></td>
-                    <td><code class="mono">W ≥ 38.0</code> hoặc <code class="mono">O_vis ≥ 72%</code></td>
-                    <td>4B: <code class="mono">T50 &gt; 9.0s</code> / <code class="mono">D85 &gt; 14.0s</code><br/>2B: <code class="mono">T50 &gt; 7.5s</code> / <code class="mono">D85 &gt; 12.0s</code></td>
-                    <td><code class="mono">V_flow ≤ 1.0</code> hoặc <code class="mono">O_vis ≥ 75%</code></td>
-                  </tr>
-                  <tr>
-                    <td><span class="state-pill st-purple">Macro Rescue</span></td>
-                    <td><code class="mono">O_vis ≥ 80%</code> và <code class="mono">W ≥ 28.0</code></td>
-                    <td>Không cần <code class="mono">T50/D85</code> (bù đứt track)</td>
-                    <td><code class="mono">V_flow ≤ 1.0 px/s</code></td>
+                    <td><span class="state-pill st-gridlocked">GRIDLOCKED</span><br/><small style="color:var(--text-tertiary);">Kẹt cứng</small></td>
+                    <td><code class="mono">≥ 85%</code></td>
+                    <td><code class="mono">Flow ≤ 15.0 px/s</code> + vượt <strong>Ngưỡng Kẹt</strong></td>
+                    <td><code class="mono">Flow ≤ 6.0 px/s</code><br/>(<code class="mono">V_STALL</code>)</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <div class="card-soft" style="padding: 14px 16px;">
-              <div class="card-label"><span>4 dòng thông số dưới mỗi ô Camera</span></div>
-              <div class="cam-metrics-grid" style="background: var(--bg-card); border: 1px solid var(--border-card);">
-                <div>W: <strong>xx.z</strong> · 2B: <strong>a</strong> · 4B: <strong>b</strong></div>
-                <div>Phủ: <strong>nm%</strong> · Flow: <strong>jk.l</strong></div>
-                <div>T50 4B: <strong>c.ds</strong> · 2B: <strong>e.fs</strong></div>
-                <div>D85 4B: <strong>–</strong> · 2B: <strong>–</strong></div>
-              </div>
-              <ul class="clean-list" style="gap: 5px; margin-top: 2px;">
-                <li><strong>W / 2B / 4B</strong> (PA1): mật độ quy đổi (<code class="mono">2B×1, car×3, bus/truck×6</code>) và số xe 2B / 4B trong Poly Zone gốc.</li>
-                <li><strong>Phủ / Flow</strong> (PA2): tỷ lệ diện tích chiếm chỗ (<code class="mono">O_vis</code>) và tốc độ dòng chảy (<code class="mono">px/s</code>) trên vùng <code class="mono">flow_zone_px</code> (+20% dọc trục).</li>
-                <li><strong>T50 4B / 2B</strong> (PA1): trung vị thời gian xe đi <em>xuyên qua</em> zone (cửa sổ 15s, cần <code class="mono">≥ 3</code> xe hoàn thành).</li>
-                <li><strong>D85 4B / 2B</strong> (PA1): thời gian xe <em>đang kẹt</em> trong zone. Hiện <code class="mono">–</code> khi đường thoáng vì cần <code class="mono">≥ 2</code> xe nằm trong zone <code class="mono">≥ 2.0s</code>.</li>
-              </ul>
+            <div class="card-soft" style="padding: 12px 18px;">
+              <div class="card-label" style="margin-bottom: 6px;"><span>2. Bảng tra nhanh ngưỡng Thời gian (Poly Zone 18–22m · Cửa sổ 30s)</span></div>
+              <table class="clean-table" style="font-size: 13px;">
+                <thead>
+                  <tr>
+                    <th>Mức ranh giới</th>
+                    <th>Ô tô / Buýt / Tải (4B)</th>
+                    <th>Xe máy (2B)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Ngưỡng Chậm</strong> (<code class="mono">CLEAR → CONGESTED</code>)</td>
+                    <td><code class="mono">T50 &gt; 5.5s</code> hoặc <code class="mono">D85 &gt; 6.5s</code></td>
+                    <td><code class="mono">T50 &gt; 4.5s</code> hoặc <code class="mono">D85 &gt; 5.0s</code></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Ngưỡng Kẹt</strong> (<code class="mono">CONGESTED → GRIDLOCKED</code>)</td>
+                    <td><code class="mono">T50 &gt; 16.0s</code> hoặc <code class="mono">D85 &gt; 20.0s</code></td>
+                    <td><code class="mono">T50 &gt; 13.5s</code> hoặc <code class="mono">D85 &gt; 17.0s</code></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
 
         <div class="slide-foot">
-          <span>Khi có &lt; 2 xe 4B trong zone, nhánh GRIDLOCKED tự chuyển sang điều kiện thuần 2B (T50 &gt; 8.5s hoặc D85 &gt; 13.0s)</span>
-          <span>06 / 09</span>
+          <span>Ranh giới T50/D85 nối tiếp liền mạch (không có khoảng hở thập phân) · Bỏ nhánh thuần 2W_ONLY cũ.</span>
+          <span>06 / 10</span>
         </div>
       </section>
 
-      <!-- SLIDE 7: INTERACTIVE CLASSIFIER SIMULATOR -->
+      <!-- SLIDE 7: INTERACTIVE CLASSIFIER SIMULATOR V2 -->
       <section id="slide-7" class="slide" aria-labelledby="s7-title">
         <div class="slide-head">
           <div>
-            <div class="slide-kicker">Kiểm chứng trực tiếp luật classify() của hệ thống</div>
-            <h2 id="s7-title" class="slide-title">Mô phỏng Tương tác: Thông số → Trạng thái Camera</h2>
+            <div class="slide-kicker">Kiểm chứng trực tiếp hàm classify() V2 trong poc/backend/ai/decision/classifier.py</div>
+            <h2 id="s7-title" class="slide-title">Mô phỏng Tương tác V2: Thông số → Trạng thái &amp; Tin cậy</h2>
           </div>
-          <span class="slide-num">07 / 09</span>
+          <span class="slide-num">07 / 10</span>
         </div>
 
         <div class="slide-body">
           <div class="preset-row" role="group" aria-label="Kịch bản mẫu">
-            <button type="button" class="preset-btn active" data-preset="clear_fast">Đông nhưng chạy nhanh</button>
-            <button type="button" class="preset-btn" data-preset="night_parked">Đêm vắng / 1 xe đỗ</button>
-            <button type="button" class="preset-btn" data-preset="congested">Ùn ứ (4B chậm, 2B luồn)</button>
-            <button type="button" class="preset-btn" data-preset="gridlocked">Kẹt cứng hỗn hợp</button>
-            <button type="button" class="preset-btn" data-preset="rescue">Macro Rescue (đứt ID)</button>
+            <button type="button" class="preset-btn active" data-preset="clear_fast">Đông chạy tốt (55%)</button>
+            <button type="button" class="preset-btn" data-preset="night_glare">Đêm mưa chói đèn (W=0)</button>
+            <button type="button" class="preset-btn" data-preset="congested">Ùn tắc chuẩn (78%)</button>
+            <button type="button" class="preset-btn" data-preset="local_stall">Kẹt cục bộ (Phủ 55%)</button>
+            <button type="button" class="preset-btn" data-preset="gridlocked">Kẹt cứng đầy đủ (88%)</button>
+            <button type="button" class="preset-btn" data-preset="macro_only">Đứt track (Macro-only)</button>
           </div>
 
           <div class="grid-asymmetric" style="align-items: stretch;">
             <div class="card-soft" style="justify-content: space-between;">
               <div class="slider-grid">
                 <label class="slider-item">
-                  <div class="slider-top"><span>Mật độ W_total</span><strong id="val-w">20.0</strong></div>
-                  <input type="range" id="in-w" min="0" max="50" step="0.5" value="20" />
+                  <div class="slider-top"><span>Độ phủ O_vis (%)</span><strong id="val-o">55%</strong></div>
+                  <input type="range" id="in-o" min="0" max="100" step="1" value="55" />
                 </label>
                 <label class="slider-item">
-                  <div class="slider-top"><span>Độ phủ O_vis (%)</span><strong id="val-o">45%</strong></div>
-                  <input type="range" id="in-o" min="0" max="100" step="1" value="45" />
+                  <div class="slider-top"><span>Dòng chảy V_flow (px/s)</span><strong id="val-v">18.0</strong></div>
+                  <input type="range" id="in-v" min="0" max="35" step="0.5" value="18" />
                 </label>
                 <label class="slider-item">
-                  <div class="slider-top"><span>Dòng chảy V_flow (px/s)</span><strong id="val-v">8.5</strong></div>
-                  <input type="range" id="in-v" min="0" max="15" step="0.2" value="8.5" />
-                </label>
-                <label class="slider-item">
-                  <div class="slider-top"><span>T50 4B (giây)</span><strong id="val-t4">2.2s</strong></div>
-                  <input type="range" id="in-t4" min="0" max="15" step="0.5" value="2.2" />
+                  <div class="slider-top"><span>T50 4B (giây, 0 = –)</span><strong id="val-t4">4.8s</strong></div>
+                  <input type="range" id="in-t4" min="0" max="25" step="0.5" value="4.8" />
                 </label>
                 <label class="slider-item">
                   <div class="slider-top"><span>D85 4B (giây, 0 = –)</span><strong id="val-d4">–</strong></div>
-                  <input type="range" id="in-d4" min="0" max="20" step="0.5" value="0" />
+                  <input type="range" id="in-d4" min="0" max="28" step="0.5" value="0" />
                 </label>
                 <label class="slider-item">
-                  <div class="slider-top"><span>T50 / D85 2B (giây)</span><strong id="val-t2">1.8s</strong></div>
-                  <input type="range" id="in-t2" min="0" max="15" step="0.5" value="1.8" />
+                  <div class="slider-top"><span>T50 2B (giây, 0 = –)</span><strong id="val-t2">3.8s</strong></div>
+                  <input type="range" id="in-t2" min="0" max="25" step="0.5" value="3.8" />
+                </label>
+                <label class="slider-item">
+                  <div class="slider-top"><span>Trọng số W (Sanity/Bonus)</span><strong id="val-w">20.0</strong></div>
+                  <input type="range" id="in-w" min="0" max="40" step="1" value="20" />
                 </label>
               </div>
               <div id="sim-reason" class="rule-trace">
-                Nhánh kích hoạt: <strong>CLEAR</strong> — Xe đông vừa phải nhưng tốc độ thoát nhanh (V_flow ≥ 6.0, T50 ≤ 5.0s).
+                Nhánh kích hoạt: <strong>CLEAR (95%)</strong> — Đông xe (40% ≤ O_vis &lt; 70%) nhưng T50/D85 nhanh và Flow ≥ 10 px/s.
               </div>
             </div>
 
             <div class="cam-mock">
               <div class="cam-mock-head">
-                <div><span class="chip">cam1</span> <strong>Nút giao Demo</strong></div>
+                <div><span class="chip">cam1</span> <strong>Bus Hoàng Văn Thụ</strong></div>
                 <span class="body-txt" style="font-size: 12px;">MJPEG · 15.0 FPS</span>
               </div>
-              <div class="cam-mock-screen">
+              <div class="cam-mock-screen" style="min-height: 158px;">
                 <div id="mock-badge" class="cam-mock-badge">THÔNG THOÁNG</div>
+                <div style="position:absolute; top:14px; right:14px; background:rgba(15,23,42,0.78); color:#E2E8F0; padding:4px 9px; border-radius:8px; font-size:11.5px;">
+                  Tin cậy: <strong id="m-conf">95%</strong>
+                </div>
                 <div class="cam-mock-zone">
-                  <span>Poly Zone ROI</span>
-                  <span id="mock-counts">2B: 5 · 4B: 3</span>
+                  <span>Poly Zone 18–22m</span>
+                  <span id="mock-counts">8 xe máy · 4 ô tô</span>
                 </div>
               </div>
               <div class="cam-metrics-grid">
-                <div>W: <strong id="m-w">14.0</strong> · 2B: <strong id="m-2w">5</strong> · 4B: <strong id="m-4w">3</strong></div>
-                <div>Phủ: <strong id="m-o">42%</strong> · Flow: <strong id="m-v">8.5</strong></div>
-                <div>T50 4B: <strong id="m-t4">1.8s</strong> · 2B: <strong id="m-t2">1.5s</strong></div>
-                <div>D85 4B: <strong id="m-d4">–</strong> · 2B: <strong id="m-d2">–</strong></div>
+                <div>Độ phủ: <strong id="m-o">55%</strong></div>
+                <div>Dòng xe: <strong id="m-v">18.0 px/s</strong></div>
+                <div>Thoát (4B/2B): <strong id="m-t4">4.8s</strong> / <strong id="m-t2">3.8s</strong></div>
+                <div>Dừng (4B/2B): <strong id="m-d4">–</strong> / <strong id="m-d2">–</strong></div>
               </div>
             </div>
           </div>
         </div>
 
         <div class="slide-foot">
-          <span>Logic chạy trực tiếp bằng đúng hàm classify() trong poc/backend/ai/decision/classifier.py</span>
-          <span>07 / 09</span>
+          <span>Logic chạy khớp 100% với hàm classify(m, cfg) trong poc/backend/ai/decision/classifier.py</span>
+          <span>07 / 10</span>
         </div>
       </section>
 
-      <!-- SLIDE 8: OCCLUSION SHIELD & STATE MACHINE -->
+      <!-- SLIDE 8: NEW SLIDE — REAL-WORLD CASES & EDGE CASES -->
       <section id="slide-8" class="slide" aria-labelledby="s8-title">
         <div class="slide-head">
           <div>
-            <div class="slide-kicker">Chống nhiễu &amp; Chống báo giả · occlusion.py + state_machine.py</div>
-            <h2 id="s8-title" class="slide-title">Lá chắn Che khuất &amp; Máy Trạng thái 2 Tầng</h2>
+            <div class="slide-kicker">Kiểm chứng đa kịch bản · Test Suite (31/31) + Thực địa Hoàng Văn Thụ</div>
+            <h2 id="s8-title" class="slide-title">Các Kịch bản Thực tế &amp; Edge Cases Hệ thống Xử lý</h2>
           </div>
-          <span class="slide-num">08 / 09</span>
+          <span class="slide-num">08 / 10</span>
+        </div>
+
+        <div class="slide-body">
+          <div class="grid-3">
+            <div class="card-white" style="padding: 14px 16px;">
+              <div class="card-label"><span>Case 1 · Sanity Gate</span><span class="state-pill st-clear">CLEAR (85%)</span></div>
+              <div class="title-md">Đêm mưa / chói đèn pha, đường trống</div>
+              <p class="body-txt">
+                <strong>Input:</strong> <code class="mono">O_vis=80%</code> (do MOG2 bắt ánh đèn trên đường ướt), <code class="mono">Flow=2.0</code>, <code class="mono">W=0</code>.<br/>
+                <strong>Xử lý:</strong> Bị chặn ngay bởi <code class="mono">W_SANITY_MIN = 3.0</code> (không đủ tối thiểu 1 ô tô hoặc 3 xe máy) → Chặn báo tắc giả ban đêm.
+              </p>
+            </div>
+
+            <div class="card-white" style="padding: 14px 16px;">
+              <div class="card-label"><span>Case 2 · Vùng giao thoa Flow</span><span class="state-pill st-blue">T50 phân xử</span></div>
+              <div class="title-md">Cùng Flow 15 px/s: lúc CLEAR, lúc CONGESTED</div>
+              <p class="body-txt">
+                <strong>Input:</strong> <code class="mono">O_vis=72%</code>, <code class="mono">Flow=15.0 px/s</code> (nằm trong dải chồng lấp 10–25 px/s).<br/>
+                <strong>Xử lý:</strong> Nếu <code class="mono">T50_4W = 4.0s (≤ 5.5s)</code> → <strong>CLEAR</strong>; nếu <code class="mono">T50_4W = 10.0s (&gt; 5.5s)</code> → <strong>CONGESTED</strong>.
+              </p>
+            </div>
+
+            <div class="card-white" style="padding: 14px 16px;">
+              <div class="card-label"><span>Case 3 · Kẹt cục bộ làn</span><span class="state-pill st-congested">CONGESTED (82%)</span></div>
+              <div class="title-md">Độ phủ mới 55% nhưng xe đã chôn chân &gt; 20s</div>
+              <p class="body-txt">
+                <strong>Input:</strong> <code class="mono">O_vis=55% (&lt; 70%)</code>, <code class="mono">Flow=8.0</code>, <code class="mono">D85_4W=22.0s (&gt; 20s)</code>.<br/>
+                <strong>Xử lý:</strong> Nhánh dự phòng <code class="mono">time_gridlock &amp; v ≤ 15</code> vẫn bắt được ùn tắc cục bộ một làn mà không bỏ sót.
+              </p>
+            </div>
+
+            <div class="card-white" style="padding: 14px 16px;">
+              <div class="card-label"><span>Case 4 · Đứt toàn bộ Track</span><span class="state-pill st-gridlocked">GRIDLOCK (75%)</span></div>
+              <div class="title-md">Production ít BBox, T50 &amp; D85 đều là None</div>
+              <p class="body-txt">
+                <strong>Input:</strong> <code class="mono">O_vis=88%</code>, <code class="mono">Flow=4.0</code>, <code class="mono">W=6.0</code>, <code class="mono">T50/D85=None</code>.<br/>
+                <strong>Xử lý:</strong> Chuyển sang ngưỡng Macro-only tách biệt: <code class="mono">Flow ≤ 6.0</code> (Kẹt cứng) / <code class="mono">Flow ≤ 18.0</code> (Ùn tắc).
+              </p>
+            </div>
+
+            <div class="card-white" style="padding: 14px 16px;">
+              <div class="card-label"><span>Case 5 · Góc chéo + Xe máy</span><span class="state-pill st-purple">54.84% tĩnh</span></div>
+              <div class="title-md">Camera Bus Hoàng Văn Thụ (đông nhưng thoáng)</div>
+              <p class="body-txt">
+                <strong>Trước sửa:</strong> Vùng bị xoắn + lọc <code class="mono">t.foot</code> → <code class="mono">22.16%</code> YOLO (<code class="mono">&lt;45%</code> tổng).<br/>
+                <strong>Sau sửa:</strong> <code class="mono">Rail-Aligned +20%</code> + <code class="mono">det.xyxy</code> + <code class="mono">MORPH_CLOSE 9×7</code> + Phối cảnh → <strong>54.84%</strong> (khớp dải 40–70% CLEAR).
+              </p>
+            </div>
+
+            <div class="card-white" style="padding: 14px 16px;">
+              <div class="card-label"><span>Case 6 · Xe buýt che khuất</span><span class="state-pill st-orange">HOLD → UNKNOWN</span></div>
+              <div class="title-md">Xe buýt chắn ngang vùng hoặc tụt đột ngột BBox</div>
+              <p class="body-txt">
+                <strong>Input:</strong> <code class="mono">bus/truck &gt; 45%</code> diện tích zone, hoặc BBox tụt <code class="mono">&gt; 65%</code> khi <code class="mono">O_vis &gt; 72%</code>.<br/>
+                <strong>Xử lý:</strong> Đóng băng trạng thái (<code class="mono">HOLD</code>) tránh báo thoáng giả; quá <code class="mono">40s</code> chuyển <code class="mono">UNKNOWN_HOLD</code>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-foot">
+          <span>Tất cả 6 kịch bản trên đều có unit test tự động tương ứng trong poc/backend/ai/tests/.</span>
+          <span>08 / 10</span>
+        </div>
+      </section>
+
+      <!-- SLIDE 9: OCCLUSION SHIELD & STATE MACHINE V2 -->
+      <section id="slide-9" class="slide" aria-labelledby="s9-title">
+        <div class="slide-head">
+          <div>
+            <div class="slide-kicker">Chống rung &amp; Chu kỳ Sự kiện V2 · occlusion.py + state_machine.py</div>
+            <h2 id="s9-title" class="slide-title">Lá chắn Che khuất &amp; Chu kỳ Sự kiện 3p → 5p → 15p</h2>
+          </div>
+          <span class="slide-num">09 / 10</span>
         </div>
 
         <div class="slide-body">
           <div class="diagram-box">
-            <svg viewBox="0 0 1120 165" role="img" aria-label="Sơ đồ chuyển trạng thái Provisional và Confirmed Event">
+            <svg viewBox="0 0 1120 170" role="img" aria-label="Sơ đồ StateMachine V2 từ Raw classify qua OcclusionShield, Provisional 5s đến chu kỳ sự kiện 3p 5p 15p">
               <defs>
                 <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                   <path d="M 0 1 L 10 5 L 0 9 z" fill="#6B6B76"></path>
                 </marker>
               </defs>
-              <rect x="16" y="38" width="160" height="88" rx="14" fill="#FFFFFF" stroke="#E9E9EE" stroke-width="1.5"></rect>
-              <text x="96" y="68" text-anchor="middle" font-size="13" font-weight="600" fill="#0B0B0F">Raw classify()</text>
-              <text x="96" y="88" text-anchor="middle" font-size="11.5" fill="#6B6B76">Mỗi 66.7ms</text>
-              <text x="96" y="106" text-anchor="middle" font-size="11" fill="#9A9AA5">CLEAR/CONG/GRID</text>
+              <rect x="16" y="40" width="155" height="90" rx="14" fill="#FFFFFF" stroke="#E9E9EE" stroke-width="1.5"></rect>
+              <text x="93" y="68" text-anchor="middle" font-size="13" font-weight="600" fill="#0B0B0F">Raw classify()</text>
+              <text x="93" y="88" text-anchor="middle" font-size="11.5" fill="#6B6B76">Mỗi 66.7ms</text>
+              <text x="93" y="106" text-anchor="middle" font-size="11" fill="#9A9AA5">(state, state_conf)</text>
 
-              <rect x="216" y="38" width="190" height="88" rx="14" fill="#FFF3E6" stroke="#FFD6A8" stroke-width="1.5"></rect>
-              <text x="311" y="66" text-anchor="middle" font-size="13" font-weight="600" fill="#A85200">OcclusionShield</text>
-              <text x="311" y="86" text-anchor="middle" font-size="11.5" fill="#6B6B76">Heavy &gt;45% hoặc tụt &gt;65%</text>
-              <text x="311" y="104" text-anchor="middle" font-size="11" fill="#A85200">HOLD tối đa 40s → UNKNOWN</text>
+              <rect x="206" y="40" width="195" height="90" rx="14" fill="#FFF3E6" stroke="#FFD6A8" stroke-width="1.5"></rect>
+              <text x="303" y="68" text-anchor="middle" font-size="13" font-weight="600" fill="#A85200">OcclusionShield</text>
+              <text x="303" y="88" text-anchor="middle" font-size="11.5" fill="#6B6B76">Heavy &gt;45% hoặc tụt &gt;65%</text>
+              <text x="303" y="106" text-anchor="middle" font-size="11" fill="#A85200">HOLD tối đa 40s → UNKNOWN</text>
 
-              <rect x="446" y="30" width="270" height="104" rx="14" fill="#EEF3FF" stroke="#D9E8FF" stroke-width="1.5"></rect>
-              <text x="581" y="58" text-anchor="middle" font-size="13" font-weight="600" fill="#1545BD">Tầng 1: Provisional (Live UI)</text>
-              <text x="581" y="80" text-anchor="middle" font-size="11.5" fill="#0B0B0F">Làm mượt đa số cửa sổ 5.0s</text>
-              <text x="581" y="99" text-anchor="middle" font-size="11.5" fill="#6B6B76">Exit Hysteresis: cần 15.0s CLEAR</text>
-              <text x="581" y="117" text-anchor="middle" font-size="11" fill="#6B6B76">liên tục mới hạ xuống CLEAR</text>
+              <rect x="436" y="32" width="265" height="106" rx="14" fill="#EEF3FF" stroke="#D9E8FF" stroke-width="1.5"></rect>
+              <text x="568" y="60" text-anchor="middle" font-size="13" font-weight="600" fill="#1545BD">Tầng 1: Provisional (Live HUD)</text>
+              <text x="568" y="82" text-anchor="middle" font-size="11.5" fill="#0B0B0F">Làm mượt đa số cửa sổ 5.0s</text>
+              <text x="568" y="101" text-anchor="middle" font-size="11.5" fill="#6B6B76">Exit Hysteresis: cần 15.0s CLEAR</text>
+              <text x="568" y="119" text-anchor="middle" font-size="11" fill="#6B6B76">liên tục mới hạ từ tắc về CLEAR</text>
 
-              <rect x="756" y="22" width="346" height="120" rx="14" fill="#FDECEC" stroke="#F7C7C4" stroke-width="1.5"></rect>
-              <text x="929" y="50" text-anchor="middle" font-size="13" font-weight="600" fill="#B42318">Tầng 2: Confirmed Event + Snapshot</text>
-              <text x="929" y="72" text-anchor="middle" font-size="11.5" fill="#0B0B0F">Chuẩn: 60s (90s đèn đỏ) / 120s kẹt cứng</text>
-              <text x="929" y="91" text-anchor="middle" font-size="11.5" fill="#1F5FFF">DEMO_MODE=1: 15s (20s đèn đỏ) / 30s</text>
-              <text x="929" y="110" text-anchor="middle" font-size="11" fill="#6B6B76">Dung sai nhấp nháy 5.0s · Cooldown 60s</text>
-              <text x="929" y="127" text-anchor="middle" font-size="11" fill="#B42318">CONGESTED → GRIDLOCKED bỏ qua cooldown</text>
+              <rect x="736" y="20" width="368" height="130" rx="14" fill="#FDECEC" stroke="#F7C7C4" stroke-width="1.5"></rect>
+              <text x="920" y="46" text-anchor="middle" font-size="13" font-weight="600" fill="#B42318">Tầng 2: Event Lifecycle V2 + Snapshot</text>
+              <text x="920" y="68" text-anchor="middle" font-size="11.5" fill="#0B0B0F">3p (180s): CONFIRMED_3M (lồng đèn đỏ 90s)</text>
+              <text x="920" y="87" text-anchor="middle" font-size="11.5" fill="#0B0B0F">+2p (5p): FOLLOWUP_5M → mỗi +15p: PERIODIC_15M</text>
+              <text x="920" y="106" text-anchor="middle" font-size="11.5" fill="#B42318">Đổi trạng thái giữ 3p: bắn ngay TRANSITION / RECOVERED</text>
+              <text x="920" y="126" text-anchor="middle" font-size="11" fill="#1F5FFF">DEMO_MODE=1: 30s / +20s / +90s (đèn đỏ 15s) · Tol 5.0s</text>
 
-              <line x1="176" y1="82" x2="212" y2="82" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arr2)"></line>
-              <line x1="406" y1="82" x2="442" y2="82" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arr2)"></line>
-              <line x1="716" y1="82" x2="752" y2="82" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arr2)"></line>
+              <line x1="171" y1="85" x2="202" y2="85" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arr2)"></line>
+              <line x1="401" y1="85" x2="432" y2="85" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arr2)"></line>
+              <line x1="701" y1="85" x2="732" y2="85" stroke="#6B6B76" stroke-width="1.6" marker-end="url(#arr2)"></line>
             </svg>
           </div>
 
           <div class="grid-3">
             <div class="card-soft">
-              <div class="card-label"><span>Kịch bản che khuất A</span></div>
-              <div class="title-md">Xe lớn chiếm &gt; 45% Zone</div>
-              <p class="body-txt">Khi diện tích BBox của <code class="mono">bus</code>/<code class="mono">truck</code> phủ quá 45% Poly Zone, hệ thống đóng băng trạng thái (<code class="mono">HOLD</code>) thay vì báo thoáng giả.</p>
+              <div class="card-label"><span>Giai đoạn 1 · Mốc 3 phút</span></div>
+              <div class="title-md">Lọc đèn đỏ 90s nằm gọn trong 180s</div>
+              <p class="body-txt">Nếu nút có đèn tín hiệu (<code class="mono">has_traffic_light=True</code>), pha dừng đèn đỏ &lt; 90s tự xả qua trước khi chạm mốc xác nhận 3 phút (<code class="mono">CONFIRMED_3M</code>).</p>
             </div>
             <div class="card-soft">
-              <div class="card-label"><span>Kịch bản che khuất B</span></div>
-              <div class="title-md">Tụt BBox &gt; 65% nhưng Phủ &gt; 72%</div>
-              <p class="body-txt">Nếu số xe nhận diện tụt mạnh trong 2s gần nhất nhưng độ phủ thị giác <code class="mono">O_vis</code> vẫn cao, giữ nguyên trạng thái chờ qua che khuất.</p>
+              <div class="card-label"><span>Giai đoạn 2 · Nhắc lại</span></div>
+              <div class="title-md">Mốc +2 phút (5p), rồi mỗi +15 phút</div>
+              <p class="body-txt">Nếu tình trạng ùn tắc/kẹt cứng vẫn tiếp diễn: nhắc lần 1 tại <code class="mono">t=5p</code> (<code class="mono">FOLLOWUP_5M</code>), sau đó định kỳ mỗi <code class="mono">+15p</code> (<code class="mono">20p, 35p...</code>).</p>
             </div>
             <div class="card-soft">
-              <div class="card-label"><span>Chống báo giả đèn đỏ</span></div>
-              <div class="title-md">Ngưỡng 90s cho nút có đèn</div>
-              <p class="body-txt">Khi bật tùy chọn <em>Có đèn tín hiệu</em> trên camera, chu kỳ dừng đèn đỏ thông thường (&lt; 90s) sẽ không tạo sự kiện ùn tắc giả.</p>
+              <div class="card-label"><span>Giai đoạn 3 · Chuyển pha</span></div>
+              <div class="title-md">Bắn ngay khi xác nhận chuyển trạng thái</div>
+              <p class="body-txt">Khi chuyển sang <code class="mono">GRIDLOCKED</code> hoặc giải tỏa về <code class="mono">CLEAR</code> và giữ ổn định đủ <code class="mono">3 phút</code>, bắn ngay <code class="mono">TRANSITION</code> hoặc <code class="mono">RECOVERED_CLEAR</code>.</p>
             </div>
           </div>
         </div>
 
         <div class="slide-foot">
-          <span>Mất tín hiệu RTSP quá 5.0s tự động chuyển badge thành MẤT TÍN HIỆU (UNKNOWN)</span>
-          <span>08 / 09</span>
+          <span>Mất tín hiệu RTSP quá 5.0s tự động chuyển badge thành MẤT TÍN HIỆU (UNKNOWN).</span>
+          <span>09 / 10</span>
         </div>
       </section>
 
-      <!-- SLIDE 9: IMPLEMENTATION STATUS & RESOLVED ISSUES -->
-      <section id="slide-9" class="slide" aria-labelledby="s9-title">
+      <!-- SLIDE 10: IMPLEMENTATION STATUS & RESOLVED ISSUES -->
+      <section id="slide-10" class="slide" aria-labelledby="s10-title">
         <div class="slide-head">
           <div>
             <div class="slide-kicker">Kiểm chứng &amp; Kinh nghiệm vận hành thực địa</div>
-            <h2 id="s9-title" class="slide-title">Trạng thái Hoàn thiện &amp; 7 Sự cố Đã Xử lý Triệt để</h2>
+            <h2 id="s10-title" class="slide-title">Trạng thái Hoàn thiện &amp; 8 Sự cố Đã Xử lý Triệt để</h2>
           </div>
-          <span class="slide-num">09 / 09</span>
+          <span class="slide-num">10 / 10</span>
         </div>
 
         <div class="slide-body">
-          <div class="card-white" style="padding: 12px 16px;">
-            <table class="clean-table">
+          <div class="card-white" style="padding: 10px 14px;">
+            <table class="clean-table" style="font-size: 12.5px;">
               <thead>
                 <tr>
                   <th>#</th>
@@ -629,20 +710,20 @@
                 <tr>
                   <td>3</td>
                   <td>Nghẽn MJPEG khi reload hoặc sửa camera</td>
-                  <td>Generator không check disconnect; card giữ <code class="mono">src</code></td>
+                  <td>Generator không check disconnect; giữ <code class="mono">src</code></td>
                   <td>Check <code class="mono">is_disconnected()</code> + <code class="mono">CameraCard.destroy()</code> (<code class="mono">0d1a6c0</code>)</td>
                 </tr>
                 <tr>
                   <td>4</td>
                   <td>WebRTC lỗi codec &amp; màn hình đen</td>
-                  <td>Camera thực tế phát <strong>H.265</strong> (WebRTC không hỗ trợ)</td>
-                  <td>Mặc định <strong>MJPEG</strong> + preview <code class="mono">640px Q55</code> chống lag (<code class="mono">fec920a, c76aa21</code>)</td>
+                  <td>Camera thực tế phát <strong>H.265</strong></td>
+                  <td>Mặc định <strong>MJPEG</strong> + preview <code class="mono">640px Q55</code> (<code class="mono">fec920a, c76aa21</code>)</td>
                 </tr>
                 <tr>
                   <td>5</td>
-                  <td>Trình duyệt giữ WebRTC cũ sau khi pull</td>
-                  <td><code class="mono">localStorage</code> lưu key cũ ghi đè mặc định</td>
-                  <td>Đổi key sang <code class="mono">video_mode_v2_*</code> + trạng thái <em>Đang lưu...</em> (<code class="mono">cd03fad</code>)</td>
+                  <td>Trình duyệt giữ WebRTC cũ / Đơ khi Lưu Zone</td>
+                  <td><code class="mono">localStorage</code> cũ &amp; Self-deadlock <code class="mono">Lock()</code></td>
+                  <td>Key <code class="mono">video_mode_v2_*</code> (<code class="mono">cd03fad</code>) + <code class="mono">RLock()</code> (<code class="mono">1ed27c9</code>)</td>
                 </tr>
                 <tr>
                   <td>6</td>
@@ -652,9 +733,15 @@
                 </tr>
                 <tr>
                   <td>7</td>
-                  <td><strong>Đơ UI &amp; Server khi Lưu Setting / Zone</strong></td>
-                  <td><strong>Self-deadlock</strong>: <code class="mono">update_meta</code> &amp; <code class="mono">set_zone</code> dùng chung <code class="mono">Lock()</code></td>
-                  <td>Đổi sang <code class="mono">RLock()</code> + <code class="mono">_set_zone_unlocked()</code> + test (<code class="mono">1ed27c9</code>)</td>
+                  <td>Ngưỡng V1 phụ thuộc kích thước vùng vẽ</td>
+                  <td>Ngưỡng cứng <code class="mono">W_*</code> &amp; chu kỳ báo đơn giản</td>
+                  <td>Nâng cấp <strong>Đặc tả V2</strong>: <code class="mono">O_vis + Flow + T50/D85</code> &amp; <code class="mono">3p→5p→15p</code></td>
+                </tr>
+                <tr>
+                  <td>8</td>
+                  <td><strong>Độ phủ O_vis kẹt &lt;45% trên cam Hoàng Văn Thụ</strong></td>
+                  <td>Xoắn <code class="mono">flow_zone_px</code>, lọc <code class="mono">t.foot</code>, <code class="mono">MORPH_OPEN</code> &amp; co phối cảnh</td>
+                  <td><code class="mono">Rail-Aligned +20%</code> + <code class="mono">det.xyxy</code> + <code class="mono">MORPH_CLOSE</code> + Phối cảnh (<code class="mono">26a6560</code>)</td>
                 </tr>
               </tbody>
             </table>
@@ -662,9 +749,9 @@
 
           <div class="grid-3">
             <div class="card-soft">
-              <div class="card-label"><span>Kiểm thử tự động</span><span class="dot dot-green"></span></div>
-              <div class="title-md">25 / 25 tests đạt 100%</div>
-              <p class="body-txt"><code class="mono">uv run pytest ai/tests tests -v</code> kiểm tra đủ Classifier, ZoneTime, Occlusion, StateMachine, Tracker, Deadlock &amp; API.</p>
+              <div class="card-label"><span>Kiểm thử tự động AI</span><span class="dot dot-green"></span></div>
+              <div class="title-md">31 / 31 tests đạt 100%</div>
+              <p class="body-txt"><code class="mono">pytest poc/backend/ai/tests -v</code> kiểm tra đủ Classifier V2, Geometry Rail-Aligned, FlowOccupancy, Occlusion, StateMachine 3p/5p/15p.</p>
             </div>
             <div class="card-soft">
               <div class="card-label"><span>Khởi chạy khuyến nghị</span><span class="dot dot-blue"></span></div>
@@ -673,15 +760,15 @@
             </div>
             <div class="card-soft">
               <div class="card-label"><span>Bước tiếp theo</span><span class="dot dot-orange"></span></div>
-              <div class="title-md">Nghiệm thu thực địa G4</div>
-              <p class="body-txt">Vẽ Poly Zone trên camera thực tế, tinh chỉnh ngưỡng <code class="mono">W_total / O_vis</code> theo góc quay thực tế và xuất log demo.</p>
+              <div class="title-md">Nghiệm thu thực địa V2</div>
+              <p class="body-txt">Đồng bộ <code class="mono">MOG2_LR_NORMAL=0.002</code> vào <code class="mono">.env</code> trên server và kiểm thử trực tiếp trên các camera giờ cao điểm.</p>
             </div>
           </div>
         </div>
 
         <div class="slide-foot">
-          <span>ATIN · Traffic Congestion Evaluation PoC Phase 1 · Báo cáo chi tiết: poc/implement/06-implementation-report.md</span>
-          <span>09 / 09</span>
+          <span>ATIN · Traffic Congestion Evaluation PoC Phase 1 (V2) · Tài liệu nguồn: poc/implement/</span>
+          <span>10 / 10</span>
         </div>
       </section>
     </main>
