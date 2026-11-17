@@ -393,4 +393,4 @@ class CongestionStagingWorker:
                 if result.get("stream_ok") and (now_wall - last_bbox_ts) >= max(settings.BBOX_PUBLISH_INTERVAL, 0.2):
                     last_bbox_ts = now_wall
                     self._publish_bbox(result)
-                time.sleep(0.01)
+                time.sleep(0.002)

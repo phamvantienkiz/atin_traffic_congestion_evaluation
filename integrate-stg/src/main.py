@@ -112,7 +112,7 @@ class CongestionEdgeOrchestrator:
             is_enabled = (required_mod in modules) or ("ANOMALY" in modules and required_mod == "CROWD_DETECTION")
 
             if is_enabled:
-                rtsp_url = str(cam.get("rtsp_url") or settings.FALLBACK_RTSP_URL)
+                rtsp_url = settings.RTSP_URL_OVERRIDE or str(cam.get("rtsp_url") or settings.FALLBACK_RTSP_URL)
                 effective_org = org_id or settings.ORGANIZATION_ID
                 if code not in self.workers:
                     logger.info(

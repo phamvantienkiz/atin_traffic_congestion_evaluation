@@ -68,12 +68,14 @@ class StagingSettings:
     TARGET_CAMERA_CODE: str = os.getenv("TARGET_CAMERA_CODE", "camera_junction")
     TARGET_CAMERA_ID: str = os.getenv("TARGET_CAMERA_ID", "")
     FALLBACK_RTSP_URL: str = os.getenv("FALLBACK_RTSP_URL", "rtsp://192.168.1.198:28537/tshtest")
+    RTSP_URL_OVERRIDE: str = os.getenv("RTSP_URL_OVERRIDE", "").strip()
 
     BBOX_AI_MODULE: str = os.getenv("BBOX_AI_MODULE", "PLATE").strip().upper()
     EVENT_PUBLISH_MODE: str = os.getenv("EVENT_PUBLISH_MODE", "NONE").strip().upper()
     STORAGE_UPLOAD_URL: str = os.getenv("STORAGE_UPLOAD_URL", "https://aioc-stg.atin.vn/storage/upload/file")
     STORAGE_CATEGORY: str = os.getenv("STORAGE_CATEGORY", "plate").strip().lower()
 
+    AI_TARGET_FPS: float = float(os.getenv("AI_TARGET_FPS", "25.0"))
     BBOX_PUBLISH_INTERVAL: float = float(os.getenv("BBOX_PUBLISH_INTERVAL", "0.1"))
     FORCE_LOCAL_ROI: bool = os.getenv("FORCE_LOCAL_ROI", "false").strip().lower() in ("1", "true", "yes")
     ALLOW_FALLBACK_ROI: bool = os.getenv("ALLOW_FALLBACK_ROI", "true").strip().lower() in ("1", "true", "yes")
@@ -87,13 +89,14 @@ class StagingSettings:
 
 def build_ai_config() -> AIConfig:
     """Build poc/backend/ai AIConfig from environment variables."""
+    from dataclasses import replace
+
     cfg = AIConfig()
     resolved_model = _resolve_model_path(cfg.model_path)
+    updates: dict = {"target_fps": settings.AI_TARGET_FPS}
     if resolved_model != cfg.model_path:
-        from dataclasses import replace
-
-        cfg = replace(cfg, model_path=resolved_model)
-    return cfg
+        updates["model_path"] = resolved_model
+    return replace(cfg, **updates)
 
 
 settings = StagingSettings()
