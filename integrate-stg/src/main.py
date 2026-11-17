@@ -11,9 +11,9 @@ import time
 
 import paho.mqtt.client as mqtt
 
+from .config import build_ai_config, settings
 from ai.core_pipeline.detector import Detector
 
-from .config import build_ai_config, settings
 from .worker import CongestionStagingWorker
 
 logging.basicConfig(
@@ -33,7 +33,7 @@ class CongestionEdgeOrchestrator:
 
         self.workers: dict[str, CongestionStagingWorker] = {}
         self.zone_cache: dict[str, list[dict]] = {}
-        self._running = True
+        self._stop_event = threading.Event()
 
         self.client = mqtt.Client(
             mqtt.CallbackAPIVersion.VERSION2,
@@ -167,8 +167,10 @@ class CongestionEdgeOrchestrator:
 
     def run(self) -> None:
         def sig_handler(signum, frame) -> None:
-            logger.info("Nhận tín hiệu dừng (%s)...", signum)
-            self._running = False
+            logger.info("Nhận tín hiệu dừng (%s), đang thoát ngay...", signum)
+            self._stop_event.set()
+            # Cho phép bấm Ctrl+C lần 2 để thoát cưỡng bức nếu RTSP/MQTT đang kẹt
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
 
         if threading.current_thread() is threading.main_thread():
             signal.signal(signal.SIGINT, sig_handler)
@@ -179,8 +181,7 @@ class CongestionEdgeOrchestrator:
         self.client.loop_start()
 
         try:
-            while self._running:
-                time.sleep(10)
+            while not self._stop_event.wait(timeout=10.0):
                 for code, worker in list(self.workers.items()):
                     elapsed = max(1.0, time.time() - worker.stats["start_time"])
                     fps = round(worker.stats["frames_processed"] / elapsed, 1)

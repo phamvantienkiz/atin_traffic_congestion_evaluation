@@ -93,29 +93,37 @@ Lưu và thoát `nano`: bấm `Ctrl + O` $\rightarrow$ `Enter` $\rightarrow$ `Ct
 
 ---
 
-## Bước 5: Chạy Probe Lấy Thông Tin `camera_junction` Từ Staging
+## Bước 5: Cập Nhật Kết Quả Probe Vào `integrate-stg/.env`
 
-```bash
-cd ~/projects/tien/atin_traffic_congestion_evaluation
-poc/backend/.venv/bin/python integrate-stg/scripts/step1_probe_camera.py
-```
+Kết quả Probe thực tế của `camera_junction` trên Staging đã xác nhận:
+- **`TARGET_CAMERA_ID`:** `fae8212f-e07e-4b17-a8e9-f3fa84e5ac91`
+- **`ORGANIZATION_ID`:** `112`
+- **`ZONE_ID`:** `283`
+- **`rtsp_url` (MediaMTX `2560x1440`):** `rtsp://admin:prometheus123@192.168.1.250:18554/c112_camera_junction_detect` (worker sẽ tự lấy URL này từ MQTT)
+- **Xung đột BBox:** Không có worker `PLATE` nào khác đang bắn BBox.
+- **`ai_zones` hiện có:** Đang có sẵn 3 vùng nhỏ (`LANE_01`, `LANE_02`, `LANE_03`) của người khác vẽ dưới module `PLATE`.
 
-**Đọc kết quả in ra màn hình (và trong `integrate-stg/scripts/probe_result.json`):**
-
-1. Lấy 3 giá trị thực tế của `camera_junction`:
-   - `id` (UUID) $\rightarrow$ điền vào `TARGET_CAMERA_ID=...`
-   - `org_id` $\rightarrow$ điền vào `ORGANIZATION_ID=...`
-   - `zone_id` $\rightarrow$ điền vào `ZONE_ID=...`
-2. Kiểm tra dòng **`[WARNING - EXISTING BBOX TRAFFIC]`**:
-   - Nếu **không thấy dòng cảnh báo này** (`[OK] Không có worker khác đang bắn BBox...`): có thể chạy đè BBox/HUD lên module `PLATE` thoải mái.
-   - Nếu **có worker khác đang bắn**: ghi nhận lại để tránh đụng khung hình trên Web.
-3. Kiểm tra dòng **`[RTSP OK]`**: xác nhận server `aiot` đọc được frame từ MediaMTX (`192.168.1.250:18554/...`) hoặc `rtsp://192.168.1.198:28537/tshtest`.
-
-Sau đó mở lại `integrate-stg/.env` để điền `TARGET_CAMERA_ID`, `ORGANIZATION_ID`, `ZONE_ID` vừa tìm được:
+Mở `integrate-stg/.env` trên server `aiot`:
 
 ```bash
 nano ~/projects/tien/atin_traffic_congestion_evaluation/integrate-stg/.env
 ```
+
+Điền/cập nhật đúng các dòng sau:
+
+```ini
+ORGANIZATION_ID=112
+ZONE_ID=283
+TARGET_CAMERA_CODE=camera_junction
+TARGET_CAMERA_ID=fae8212f-e07e-4b17-a8e9-f3fa84e5ac91
+
+# Trong lúc chưa xóa 3 vùng LANE_01..03 trên Web STG, đặt FORCE_LOCAL_ROI=true để dùng đúng vùng 4 điểm của bạn.
+# Khi nào bạn xóa LANE_01..03 và vẽ lại polyzone mới trên Web STG, đổi lại thành FORCE_LOCAL_ROI=false.
+FORCE_LOCAL_ROI=true
+FALLBACK_ROI_POINTS=[{"x":0.0247,"y":0.5172},{"x":0.4374,"y":0.3009},{"x":0.8836,"y":0.3574},{"x":0.9065,"y":0.884}]
+```
+
+Lưu và thoát `nano` (`Ctrl + O` $\rightarrow$ `Enter` $\rightarrow$ `Ctrl + X`).
 
 ---
 
@@ -125,7 +133,7 @@ Chạy script test bắn BBox + HUD giả lập trong 10 giây và upload ảnh 
 
 ```bash
 cd ~/projects/tien/atin_traffic_congestion_evaluation
-poc/backend/.venv/bin/python integrate-stg/scripts/step2_smoke_test.py
+uv run --project poc/backend --no-sync python integrate-stg/scripts/step2_smoke_test.py
 ```
 
 Ngay trong lúc terminal chạy 10 giây, mở trình duyệt trên laptop vào **`https://aioc-stg.atin.vn/monitoring`**:
@@ -146,8 +154,12 @@ Tạo phiên `tmux` riêng tên `stg` để chạy ngầm 24/7 (không bị tắ
 ```bash
 tmux new -s stg
 cd ~/projects/tien/atin_traffic_congestion_evaluation/integrate-stg
-../poc/backend/.venv/bin/python -m src.main
+uv run --project ../poc/backend --no-sync python -m src.main
 ```
+
+> **Lưu ý về `--no-sync` & `Ctrl + C`:**
+> - Dùng `--no-sync` để `uv` giữ nguyên `paho-mqtt` đã cài vào `poc/backend/.venv` ở Bước 3.
+> - Khi muốn dừng worker, bấm **`Ctrl + C`** sẽ ngắt tức thì (hoặc bấm `Ctrl + C` lần 2 nếu muốn thoát cưỡng bức khi RTSP đang đọc frame).
 
 **Quan sát log chuẩn:**
 ```text

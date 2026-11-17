@@ -12,12 +12,12 @@ from typing import Any
 import cv2
 import numpy as np
 
+from .config import settings
+from .storage_client import upload_snapshot
+
 from ai.config import AIConfig
 from ai.core_pipeline.detector import Detector
 from ai.engine.camera_processor import CameraProcessor
-
-from .config import settings
-from .storage_client import upload_snapshot
 
 logger = logging.getLogger("worker")
 VN_TZ = timezone(timedelta(hours=7))
