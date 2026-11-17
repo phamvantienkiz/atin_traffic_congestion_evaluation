@@ -383,11 +383,14 @@ class CongestionStagingWorker:
                     partial, ev_frame = self.processor.pending_event
                     self.processor.pending_event = None
                     self._handle_confirmed_event(partial, ev_frame)
+
+                # Publish ngay lập tức sau mỗi frame suy luận để giảm độ trễ tối đa
+                last_bbox_ts = time.time()
+                self._publish_bbox(result)
             else:
                 result = self.processor.idle_result(now_mono)
-                time.sleep(0.02)
-
-            now_wall = time.time()
-            if result.get("stream_ok") and (now_wall - last_bbox_ts) >= settings.BBOX_PUBLISH_INTERVAL:
-                last_bbox_ts = now_wall
-                self._publish_bbox(result)
+                now_wall = time.time()
+                if result.get("stream_ok") and (now_wall - last_bbox_ts) >= max(settings.BBOX_PUBLISH_INTERVAL, 0.2):
+                    last_bbox_ts = now_wall
+                    self._publish_bbox(result)
+                time.sleep(0.01)
