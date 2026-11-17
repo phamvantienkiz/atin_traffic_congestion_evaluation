@@ -79,3 +79,11 @@ def test_extend_zone_longitudinal_preserves_width_and_extends_axis() -> None:
     assert abs(zone_axis_length(ext) / zone_axis_length(zone) - 1.4) < 0.05
     # Ratio 0 returns original zone
     assert np.array_equal(extend_zone_longitudinal(zone, 1280, 720, ratio=0.0), zone)
+
+
+def test_extend_zone_longitudinal_rail_aligned_oblique_trapezoid() -> None:
+    # Oblique trapezoid from Bus Hoang Van Thu camera: left-bottom y=388 > top-right y=334
+    zone = np.array([[18, 388], [352, 262], [1133, 334], [1158, 632]], dtype=np.int32)
+    ext = extend_zone_longitudinal(zone, 1280, 720, ratio=0.20)
+    assert ext is not None
+    assert ext.tolist() == [[0, 413], [419, 237], [1128, 274], [1163, 692]]

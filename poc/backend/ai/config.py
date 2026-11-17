@@ -91,7 +91,7 @@ class AIConfig:
     aux_w: int = 320
     aux_h: int = 180
     flow_zone_extend_ratio: float = _env_field("FLOW_ZONE_EXTEND_RATIO", 0.20, float)
-    mog2_lr_normal: float = _env_field("MOG2_LR_NORMAL", 0.005, float)
+    mog2_lr_normal: float = _env_field("MOG2_LR_NORMAL", 0.002, float)
     flow_noise_px: float = _env_field("FLOW_NOISE_PX", 0.8, float)
     v_stall: float = _env_field("V_STALL", 6.0, float)
     v_gridlock_max: float = _env_field("V_GRIDLOCK_MAX", 15.0, float)

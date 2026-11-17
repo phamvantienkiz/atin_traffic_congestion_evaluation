@@ -17,7 +17,7 @@ from ai.core_pipeline.zone_time import ZoneTimeAnalyzer
 from ai.decision.classifier import classify
 from ai.decision.occlusion import OcclusionShield
 from ai.decision.state_machine import StateMachine
-from ai.geometry import point_in_zone, roi_from_zone, zone_to_px
+from ai.geometry import extend_zone_longitudinal, roi_from_zone, zone_to_px
 
 STATE_COLORS = {
     "CLEAR": (94, 197, 34),       # #22c55e (BGR)
@@ -69,9 +69,12 @@ def main() -> None:
     sm = StateMachine(CFG, has_traffic_light=args.light)
 
     zone_px = zone_to_px(parse_zone(args.zone), CFG.frame_w, CFG.frame_h)
-    roi = roi_from_zone(zone_px, CFG.frame_w, CFG.frame_h, CFG.roi_padding)
+    flow_zone_px = extend_zone_longitudinal(
+        zone_px, CFG.frame_w, CFG.frame_h, CFG.flow_zone_extend_ratio
+    )
+    roi = roi_from_zone(flow_zone_px, CFG.frame_w, CFG.frame_h, CFG.roi_padding)
     zone_time.set_zone(zone_px)
-    flow_occ.set_zone(zone_px)
+    flow_occ.set_zone(flow_zone_px)
     occlusion.set_zone(zone_px)
 
     interval_ms = 1000.0 / CFG.target_fps
@@ -103,11 +106,10 @@ def main() -> None:
             tracks = tracker.update(det, now)
             zm = zone_time.update(tracks, now)
 
-            in_boxes = [t.xyxy for t in tracks if point_in_zone(zone_px, t.foot)]
-            import numpy as np
-            arr = np.stack(in_boxes, axis=0) if in_boxes else np.zeros((0, 4), dtype=np.float32)
             d85_max = max(float(zm["d85_2w"] or 0.0), float(zm["d85_4w"] or 0.0))
-            o_vis, v_flow = flow_occ.update(frame, arr, dt=dt, stalled_hint=(d85_max > 5.0))
+            w_total = float(zm["w_total"] or 0.0)
+            stalled_hint = (d85_max > 5.0) or (w_total >= CFG.w_sanity_min)
+            o_vis, v_flow = flow_occ.update(frame, det.xyxy, dt=dt, stalled_hint=stalled_hint)
             occ = occlusion.update(tracks, o_vis, now)
 
             metrics = {**zm, "o_vis": o_vis, "v_flow": v_flow}

@@ -116,24 +116,15 @@ class CameraProcessor:
             tracks = self.tracker.update(det, now)
             zm = self.zone_time.update(tracks, now)
 
-            in_zone_boxes = [
-                t.xyxy for t in tracks if point_in_zone(self.flow_zone_px, t.foot)
-            ]
-            bboxes_arr = (
-                np.stack(in_zone_boxes, axis=0)
-                if in_zone_boxes
-                else np.zeros((0, 4), dtype=np.float32)
-            )
             d85_max = max(
                 float(zm["d85_2w"] or 0.0),
                 float(zm["d85_4w"] or 0.0),
             )
-            prev_o = float(self._last_result["metrics"]["o_vis"]) if self._last_result else 0.0
-            n_veh = int(zm["n_2w"] or 0) + int(zm["n_4w"] or 0)
-            stalled_hint = (d85_max > 5.0) or (prev_o >= self.cfg.o_congested and n_veh >= 2)
+            w_total = float(zm["w_total"] or 0.0)
+            stalled_hint = (d85_max > 5.0) or (w_total >= self.cfg.w_sanity_min)
             o_vis, v_flow = self.flow_occ.update(
                 frame,
-                bboxes_arr,
+                det.xyxy,
                 dt=dt,
                 stalled_hint=stalled_hint,
             )

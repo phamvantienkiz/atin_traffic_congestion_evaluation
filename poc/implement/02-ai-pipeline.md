@@ -306,27 +306,31 @@ class ZoneTimeAnalyzer:
 
 ---
 
-## B7. `aux_pipeline/flow_occupancy.py` — O_vis + V_flow
+## B7. `aux_pipeline/flow_occupancy.py` — O_vis + V_flow (Chuẩn hóa Không gian Chiếm dụng & Phối cảnh Đa Camera)
 
 ```python
 class FlowOccupancy:
     def __init__(self, cfg):
-        self.mog2 = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=25, detectShadows=True)
+        self.mog2 = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=16, detectShadows=True)
+        self.close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 7))
         self.prev_gray = None
-        self.zone_mask_small = None  # 320x180
+        self.zone_mask_small = None      # 320x180 (từ flow_zone_px đã mở rộng Rail-Aligned +20%)
+        self.row_weights = None          # (180, 1) float32: trọng số phối cảnh tự động từ y_min (2.2) -> y_max (0.8)
         self.frozen = False
 
-    def set_zone(self, zone_px_1280): # resize mask về 320x180; reset prev_gray
+    def set_zone(self, zone_px_1280):
+        # resize mask của flow_zone_px về 320x180; tính row_weights tuyến tính 2.2 -> 0.8 theo [y_min..y_max]; reset prev_gray
 
     def update(self, frame_1280: np.ndarray, bboxes_1280: np.ndarray, dt: float, stalled_hint: bool) -> tuple[float, float]:
+        # bboxes_1280: truyền trực tiếp det.xyxy (conf >= 0.15) từ CameraProcessor (không lọc theo tracks hay t.foot)
         small = cv2.resize(frame, (320,180), interpolation=cv2.INTER_AREA)
         gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
         lr = 0.0 if self.frozen else cfg.mog2_lr_normal
         fg = self.mog2.apply(small, learningRate=lr)
         fg = np.where(fg == 255, 255, 0).astype(np.uint8)         # bỏ bóng (127)
-        fg = cv2.morphologyEx(fg, cv2.MORPH_OPEN, np.ones((3,3), np.uint8))
-        # vẽ bbox (scale 0.25) đặc 255 vào mask_yolo; occupied = (fg | mask_yolo) & zone
-        o_vis = count(occupied) / count(zone)
+        # Vẽ det.xyxy (scale 0.25) đặc 255 vào mask_yolo; gộp raw_union = fg | mask_yolo
+        # Áp dụng MORPH_CLOSE (elip 9x7) lấp khe hở nhỏ giữa các xe máy đi sát nhau -> cắt theo zone_mask_small
+        # Tính o_vis có trọng số phối cảnh: sum((occupied > 0) * row_weights) / sum((zone_mask_small > 0) * row_weights)
         # Optical flow
         if prev_gray is not None:
             flow = cv2.calcOpticalFlowFarneback(prev_gray, gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
@@ -334,11 +338,11 @@ class FlowOccupancy:
             sel = occupied > 0
             v_flow = (mag[sel].mean() / dt) if sel.any() and dt > 0 else 0.0
         self.prev_gray = gray
-        # Đóng/mở băng nền
-        self.frozen = (v_flow < cfg.v_stall) and stalled_hint     # stalled_hint = d85 > 5s
+        # Đóng/mở băng nền (stalled_hint = d85_max > 5.0 or w_total >= cfg.w_sanity_min)
+        self.frozen = (v_flow < cfg.v_stall) and stalled_hint
         return o_vis, v_flow
 ```
-Làm mượt `o_vis`, `v_flow` bằng EMA (alpha 0.3) trước khi trả.
+Làm mượt `o_vis`, `v_flow` bằng EMA (alpha 0.3) trước khi trả. (Xem chi tiết tại [10-threshold-and-event-lifecycle-spec.md](./10-threshold-and-event-lifecycle-spec.md) Phần 5).
 
 ---
 

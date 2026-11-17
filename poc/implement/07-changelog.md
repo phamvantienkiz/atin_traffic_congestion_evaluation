@@ -145,3 +145,13 @@ Khi đồng bộ ngược tài liệu trong `poc/implement/`, cần kiểm tra v
 - **Nhắc lại định kỳ mỗi `+15 phút` (`PERIODIC_REMINDER_S = 900.0s`, tại các mốc `20p, 35p, 50p...`):** Nếu sự kiện vẫn còn $\rightarrow$ Bắn sự kiện `event_stage = "PERIODIC_15M"`.
 - **Bắn ngay khi xác nhận Chuyển trạng thái (Sau mốc 3 phút đầu):** Khi đã ở trạng thái xác nhận (`CONGESTED` hoặc `GRIDLOCKED`) mà tuyến đường chuyển sang trạng thái khác (`CLEAR` hoặc `GRIDLOCKED`) và giữ ổn định trạng thái mới đủ **3 phút (`180s`)** $\rightarrow$ Bắn ngay bản tin chuyển trạng thái (`event_stage = "TRANSITION"` hoặc `"RECOVERED_CLEAR"`).
 - *(Khi `DEMO_MODE=1`: rút tỷ lệ thời gian xuống `30s` xác nhận / `+20s` nhắc lần 1 / `+90s` định kỳ).*
+
+
+### 4. Bổ sung Chuẩn hóa Cách Tính Độ Phủ `O_vis` Tổng Quát Đa Camera (Xem Mục 5 Tài liệu 10)
+- **Giữ nguyên yêu cầu mở rộng `+20%` ở 2 cạnh trên/dưới (`FLOW_ZONE_EXTEND_RATIO = 0.20`) nhưng sửa công thức hình học trong `extend_zone_longitudinal` (`Rail-Aligned Extension`):**
+  - Thay vì chiếu lên 1 vector trung bình làm xoắn vùng trên camera góc chéo (như cam Bus Hoàng Văn Thụ), thuật toán mới trượt 2 đỉnh cạnh trên và 2 đỉnh cạnh dưới dọc theo chính **2 cạnh biên lề đường (`Left Rail` & `Right Rail`)**, giúp vùng mở rộng `+20%` bám khít 100% theo vỉa hè.
+- **Đưa toàn bộ `det.xyxy (conf >= 0.15)` vào `flow_occ.update()`:** Bỏ lọc kép `tracks (conf >= 0.45)` và bỏ lọc `point_in_zone(..., t.foot)` trong `camera_processor.py`.
+- **Nâng cấp `FlowOccupancy` (Hướng B2 Tự động):**
+  - Hạ `varThreshold` của MOG2 xuống `16`, `MOG2_LR_NORMAL = 0.002`, xóa vòng lặp chết của `stalled_hint`.
+  - Thay `MORPH_OPEN(3x3)` bằng **`MORPH_CLOSE` (kernel elip `9x7`)** trên mặt nạ gộp `fg | mask_yolo` để lấp khe hở nhỏ giữa các xe máy đi sát nhau.
+  - Áp dụng **Trọng số Phối cảnh Tự động theo chiều dọc (`Perspective Row Weighting`: `2.2` ở đỉnh xa $\rightarrow$ `0.8` ở đáy gần)** để cân bằng diện tích phương tiện ở xa và gần trên mọi góc lắp camera, đảm bảo `O_vis` khớp hoàn toàn với bộ ngưỡng `40% / 70% / 85%`.

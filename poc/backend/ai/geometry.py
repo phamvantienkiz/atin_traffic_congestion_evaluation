@@ -72,26 +72,42 @@ def extend_zone_longitudinal(
     h: int,
     ratio: float = 0.20,
 ) -> np.ndarray | None:
-    """Extend zone along its longitudinal road axis by `ratio` at both ends without widening."""
+    """Extend zone along its two longitudinal road-rail edges by `ratio` at both ends."""
     if zone_px is None or len(zone_px) < 3 or ratio <= 0.0:
         return zone_px
 
     pts = zone_px.astype(np.float32)
-    idx = np.argsort(pts[:, 1])
-    top_mid = pts[idx[:2]].mean(axis=0)
-    bot_mid = pts[idx[-2:]].mean(axis=0)
 
-    axis = bot_mid - top_mid
-    length = float(np.linalg.norm(axis))
-    if length < 1e-3:
-        return zone_px.copy()
+    if len(pts) == 4:
+        # Pick the opposite edge pair with steeper |dy|/|dx| as the two road rails
+        def _steepness(a: int, b: int) -> float:
+            return abs(float(pts[b, 1] - pts[a, 1])) / (abs(float(pts[b, 0] - pts[a, 0])) + 1.0)
 
-    unit = axis / length
-    mid = 0.5 * (top_mid + bot_mid)
+        pair_a_score = _steepness(0, 1) + _steepness(2, 3)
+        pair_b_score = _steepness(1, 2) + _steepness(3, 0)
+        rails = ((0, 1), (2, 3)) if pair_a_score >= pair_b_score else ((1, 2), (3, 0))
 
-    # Scale only the longitudinal projection around `mid`; lateral width stays unchanged
-    proj = (pts - mid) @ unit
-    extended = pts + np.outer(proj * (2.0 * ratio), unit)
+        extended = pts.copy()
+        for a, b in rails:
+            top_idx, bot_idx = (a, b) if pts[a, 1] <= pts[b, 1] else (b, a)
+            rail_vec = pts[bot_idx] - pts[top_idx]
+            extended[top_idx] = pts[top_idx] - ratio * rail_vec
+            extended[bot_idx] = pts[bot_idx] + ratio * rail_vec
+    else:
+        idx = np.argsort(pts[:, 1])
+        top_mid = pts[idx[:2]].mean(axis=0)
+        bot_mid = pts[idx[-2:]].mean(axis=0)
+
+        axis = bot_mid - top_mid
+        length = float(np.linalg.norm(axis))
+        if length < 1e-3:
+            return zone_px.copy()
+
+        unit = axis / length
+        mid = 0.5 * (top_mid + bot_mid)
+        proj = (pts - mid) @ unit
+        extended = pts + np.outer(proj * (2.0 * ratio), unit)
+
     out = np.rint(extended).astype(np.int32)
     out[:, 0] = np.clip(out[:, 0], 0, w - 1)
     out[:, 1] = np.clip(out[:, 1], 0, h - 1)

@@ -16,19 +16,27 @@ class FlowOccupancy:
         self.cfg = cfg
         self.mog2 = cv2.createBackgroundSubtractorMOG2(
             history=500,
-            varThreshold=25,
+            varThreshold=16,
             detectShadows=True,
         )
-        self._kernel = np.ones((3, 3), dtype=np.uint8)
+        self.close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 7))
         self.prev_gray: np.ndarray | None = None
         self.zone_mask_small = np.full((cfg.aux_h, cfg.aux_w), 255, dtype=np.uint8)
-        self.zone_area_small = int(cfg.aux_h * cfg.aux_w)
+        self.row_weights = self._build_row_weights(0, cfg.aux_h - 1)
+        self.zone_weight_sum = float(self.row_weights.sum()) * float(cfg.aux_w)
         self.frozen = False
         self._o_ema: float | None = None
         self._v_ema: float | None = None
 
+    def _build_row_weights(self, y_min: int, y_max: int) -> np.ndarray:
+        """Build linear perspective row weights from 2.2 (far/top) to 0.8 (near/bottom)."""
+        y_coords = np.arange(self.cfg.aux_h, dtype=np.float32)[:, None]
+        denom = float(max(1, y_max - y_min))
+        weights = 2.2 - 1.4 * ((y_coords - float(y_min)) / denom)
+        return np.clip(weights, 0.8, 2.2).astype(np.float32)
+
     def set_zone(self, zone_px_1280: np.ndarray | None) -> None:
-        """Update 320x180 zone mask and reset temporal state."""
+        """Update 320x180 zone mask, perspective row weights, and reset temporal state."""
         if zone_px_1280 is None or len(zone_px_1280) < 3:
             self.zone_mask_small = np.full(
                 (self.cfg.aux_h, self.cfg.aux_w), 255, dtype=np.uint8
@@ -39,7 +47,15 @@ class FlowOccupancy:
             scaled = np.round(zone_px_1280.astype(np.float32) * np.array([sx, sy])).astype(np.int32)
             self.zone_mask_small = zone_mask(scaled, self.cfg.aux_w, self.cfg.aux_h)
 
-        self.zone_area_small = max(1, int(cv2.countNonZero(self.zone_mask_small)))
+        ys = np.where(self.zone_mask_small > 0)[0]
+        if len(ys) > 0:
+            y_min, y_max = int(ys.min()), int(ys.max())
+        else:
+            y_min, y_max = 0, self.cfg.aux_h - 1
+
+        self.row_weights = self._build_row_weights(y_min, y_max)
+        zone_bool = (self.zone_mask_small > 0).astype(np.float32)
+        self.zone_weight_sum = max(1e-6, float((zone_bool * self.row_weights).sum()))
         self.prev_gray = None
         self.frozen = False
         self._o_ema = None
@@ -64,7 +80,6 @@ class FlowOccupancy:
         fg = self.mog2.apply(small, learningRate=lr)
         # Keep only strong foreground (255), discard shadows (127)
         fg = np.where(fg == 255, 255, 0).astype(np.uint8)
-        fg = cv2.morphologyEx(fg, cv2.MORPH_OPEN, self._kernel)
 
         mask_yolo = np.zeros((self.cfg.aux_h, self.cfg.aux_w), dtype=np.uint8)
         if len(bboxes_1280) > 0:
@@ -78,8 +93,11 @@ class FlowOccupancy:
                 if x2 > x1 and y2 > y1:
                     cv2.rectangle(mask_yolo, (x1, y1), (x2, y2), 255, thickness=-1)
 
-        occupied = cv2.bitwise_and(cv2.bitwise_or(fg, mask_yolo), self.zone_mask_small)
-        o_vis_raw = float(cv2.countNonZero(occupied)) / float(self.zone_area_small)
+        raw_union = cv2.bitwise_or(fg, mask_yolo)
+        closed = cv2.morphologyEx(raw_union, cv2.MORPH_CLOSE, self.close_kernel)
+        occupied = cv2.bitwise_and(closed, self.zone_mask_small)
+        occ_bool = (occupied > 0).astype(np.float32)
+        o_vis_raw = float((occ_bool * self.row_weights).sum()) / self.zone_weight_sum
 
         v_flow_raw = 0.0
         if self.prev_gray is not None and dt > 0.0:
