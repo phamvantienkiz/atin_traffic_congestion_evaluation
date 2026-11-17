@@ -9,6 +9,12 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+# Ép FFmpeg đọc RTSP không đệm để giảm độ trễ BBox so với luồng WebRTC trên Web VMS
+os.environ.setdefault(
+    "OPENCV_FFMPEG_CAPTURE_OPTIONS",
+    "rtsp_transport;tcp|fflags;nobuffer|flags;low_delay|stimeout;5000000",
+)
+
 INTEGRATE_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = INTEGRATE_ROOT.parent
 POC_BACKEND_DIR = REPO_ROOT / "poc" / "backend"
@@ -68,7 +74,7 @@ class StagingSettings:
     STORAGE_UPLOAD_URL: str = os.getenv("STORAGE_UPLOAD_URL", "https://aioc-stg.atin.vn/storage/upload/file")
     STORAGE_CATEGORY: str = os.getenv("STORAGE_CATEGORY", "plate").strip().lower()
 
-    BBOX_PUBLISH_INTERVAL: float = float(os.getenv("BBOX_PUBLISH_INTERVAL", "0.2"))
+    BBOX_PUBLISH_INTERVAL: float = float(os.getenv("BBOX_PUBLISH_INTERVAL", "0.1"))
     FORCE_LOCAL_ROI: bool = os.getenv("FORCE_LOCAL_ROI", "false").strip().lower() in ("1", "true", "yes")
     ALLOW_FALLBACK_ROI: bool = os.getenv("ALLOW_FALLBACK_ROI", "true").strip().lower() in ("1", "true", "yes")
     FALLBACK_ROI_POINTS: list[dict[str, float]] = _parse_roi_points(

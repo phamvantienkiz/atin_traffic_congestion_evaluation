@@ -22,12 +22,16 @@ from ai.engine.camera_processor import CameraProcessor
 logger = logging.getLogger("worker")
 VN_TZ = timezone(timedelta(hours=7))
 
-_STATE_COLORS = {
-    "CLEAR": "#22c55e",
-    "CONGESTED": "#f59e0b",
-    "GRIDLOCKED": "#ef4444",
-    "UNKNOWN": "#64748b",
+_STATE_META = {
+    "CLEAR": ("#22c55e", "THÔNG THOÁNG"),
+    "CONGESTED": ("#f59e0b", "ÙN TẮC"),
+    "GRIDLOCKED": ("#ef4444", "KẸT XE"),
+    "UNKNOWN": ("#9ca3af", "MẤT TÍN HIỆU"),
 }
+
+
+def _fmt_sec(val: float | None) -> str:
+    return "–" if val is None else f"{float(val):.1f}s"
 
 
 class CongestionStagingWorker:
@@ -140,12 +144,21 @@ class CongestionStagingWorker:
         logger.info("[%s] Worker stopped.", self.camera_code)
 
     def _publish_bbox(self, result: dict) -> None:
-        """Publish realtime BBox + congestion HUD to smart_vms/ai/bbox/{camera_code} (C07)."""
+        """Publish realtime BBox + 5-line PoC HUD to smart_vms/ai/bbox/{camera_code} (C07)."""
         state = str(result.get("state", "UNKNOWN"))
+        state_color, state_label = _STATE_META.get(state, _STATE_META["UNKNOWN"])
+        if result.get("occlusion_hold"):
+            state_label = f"{state_label} (che khuất)"
+
         metrics = result.get("metrics") or {}
-        n_veh = int(metrics.get("n_2w", 0)) + int(metrics.get("n_4w", 0))
-        o_vis_pct = round(float(metrics.get("o_vis") or 0.0) * 100.0, 1)
+        n_2w = int(metrics.get("n_2w", 0))
+        n_4w = int(metrics.get("n_4w", 0))
+        o_vis_pct = round(float(metrics.get("o_vis") or 0.0) * 100.0)
         v_flow = round(float(metrics.get("v_flow") or 0.0), 1)
+        t50_4w = _fmt_sec(metrics.get("t50_4w"))
+        t50_2w = _fmt_sec(metrics.get("t50_2w"))
+        d85_4w = _fmt_sec(metrics.get("d85_4w"))
+        d85_2w = _fmt_sec(metrics.get("d85_2w"))
 
         vms_dets = [
             {
@@ -167,9 +180,16 @@ class CongestionStagingWorker:
             "timestamp": time.time(),
             "detections": vms_dets,
             "hud": {
-                "text": f"{state} | {n_veh} xe | O_vis: {o_vis_pct}% | Flow: {v_flow} px/s",
+                "lines": [
+                    state_label,
+                    f"Độ phủ: {o_vis_pct}% · Dòng xe: {v_flow} px/s",
+                    f"Trong vùng: {n_2w} xe máy · {n_4w} ô tô",
+                    f"Thoát vùng: Ô tô {t50_4w} · Xe máy {t50_2w}",
+                    f"Dừng/chậm: Ô tô {d85_4w} · Xe máy {d85_2w}",
+                ],
+                "line_colors": [state_color, "#e2e8f0", "#e2e8f0", "#e2e8f0", "#e2e8f0"],
+                "color": state_color,
                 "display_ms": 1000,
-                "color": _STATE_COLORS.get(state, "#64748b"),
             },
         }
         self.mqtt_client.publish(topic, json.dumps(payload), qos=0)
