@@ -21,6 +21,11 @@
       <span id="ws-status" class="ws-pill offline" title="Trạng thái WebSocket">
         <span class="ws-dot"></span> WS
       </span>
+      <button type="button" id="btn-events" class="btn btn-events" title="Xem danh sách sự kiện xác nhận">
+        <span>Sự kiện</span>
+        <span id="event-count" class="count-pill">0</span>
+        <span id="event-unread" class="unread-badge hidden">0</span>
+      </button>
       <button type="button" id="btn-sound" class="btn btn-icon" title="Bật/tắt âm thanh cảnh báo">🔕</button>
       <button type="button" id="btn-add-cam" class="btn btn-primary">+ Thêm camera</button>
     </div>
@@ -30,17 +35,20 @@
     <section class="grid-section">
       <div id="camera-grid" class="camera-grid" data-layout="4"></div>
     </section>
+  </main>
 
-    <aside class="events-sidebar">
+  <!-- Popover danh sách sự kiện xác nhận nổi trên header -->
+  <div id="events-overlay" class="events-overlay hidden" role="dialog" aria-modal="true" aria-label="Danh sách sự kiện xác nhận">
+    <aside class="events-popover">
       <div class="sidebar-header">
         <h2>Sự kiện xác nhận</h2>
-        <span id="event-count" class="count-pill">0</span>
+        <button type="button" id="btn-close-events" class="btn-close" title="Đóng">✕</button>
       </div>
       <div id="events-list" class="events-list">
         <div class="empty-hint">Chưa có sự kiện ùn tắc / kẹt xe.</div>
       </div>
     </aside>
-  </main>
+  </div>
 
   <!-- Modal thêm / sửa camera & import zone -->
   <div id="cam-modal" class="modal hidden" role="dialog" aria-modal="true">

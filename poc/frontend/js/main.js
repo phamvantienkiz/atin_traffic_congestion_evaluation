@@ -26,13 +26,23 @@ const btnDeleteCam = document.getElementById('btn-delete-cam');
 const btnImportZone = document.getElementById('btn-import-zone');
 
 const snapModal = document.getElementById('snap-modal');
+const eventsOverlay = document.getElementById('events-overlay');
+const btnEvents = document.getElementById('btn-events');
+const btnCloseEvents = document.getElementById('btn-close-events');
 const eventsPanel = new EventsPanel(
   document.getElementById('events-list'),
   document.getElementById('event-count'),
   snapModal,
   document.getElementById('snap-modal-img'),
   document.getElementById('snap-modal-title'),
+  btnEvents,
+  document.getElementById('event-unread'),
 );
+
+function setEventsOpen(open) {
+  eventsOverlay.classList.toggle('hidden', !open);
+  eventsPanel.setOpen(open);
+}
 
 let appCfg = { webrtc_port: 28889, demo_mode: false };
 let cards = {};
@@ -123,6 +133,23 @@ document.querySelectorAll('.btn-seg').forEach((btn) => {
 });
 
 document.getElementById('btn-add-cam').addEventListener('click', () => openCamModal(null));
+
+btnEvents.addEventListener('click', () => {
+  const willOpen = eventsOverlay.classList.contains('hidden');
+  setEventsOpen(willOpen);
+});
+
+btnCloseEvents.addEventListener('click', () => setEventsOpen(false));
+
+eventsOverlay.addEventListener('click', (e) => {
+  if (e.target === eventsOverlay) setEventsOpen(false);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !eventsOverlay.classList.contains('hidden')) {
+    setEventsOpen(false);
+  }
+});
 
 soundBtn.addEventListener('click', () => {
   eventsPanel.soundEnabled = !eventsPanel.soundEnabled;
@@ -232,6 +259,8 @@ async function init() {
         for (const r of msg.data || []) cards[r.camera_id]?.update(r);
       } else if (msg.type === 'event') {
         eventsPanel.prepend(msg.data, (cid) => cards[cid]?.flashAlert());
+        const ev = msg.data || {};
+        showToast(`Sự kiện mới: ${ev.camera_name || ev.camera_id || ''} (${ev.state || ''})`);
       }
     },
     (online) => {

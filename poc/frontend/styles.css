@@ -135,27 +135,19 @@ body {
 /* Workspace */
 .workspace {
   flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 310px;
-  gap: 16px;
-  padding: 16px 20px;
-  align-items: start;
-}
-
-@media (max-width: 1100px) {
-  .workspace { grid-template-columns: 1fr; }
+  width: 100%;
+  padding: 14px 16px;
 }
 
 .camera-grid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+  width: 100%;
 }
-.camera-grid[data-layout="4"] { grid-template-columns: repeat(2, 1fr); }
-.camera-grid[data-layout="6"] { grid-template-columns: repeat(3, 1fr); }
-.camera-grid[data-layout="8"] { grid-template-columns: repeat(4, 1fr); }
 
-@media (max-width: 900px) {
-  .camera-grid[data-layout] { grid-template-columns: 1fr; }
+@media (max-width: 768px) {
+  .camera-grid { grid-template-columns: 1fr; }
 }
 
 /* Camera Card */
@@ -311,14 +303,50 @@ body {
   justify-content: center;
 }
 
-/* Events sidebar */
-.events-sidebar {
+/* Header Events Notification & Floating Popover */
+.btn-events {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-events.has-unread {
+  background: #fef2f2;
+  color: #b91c1c;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35);
+  animation: noti-pulse 1.2s ease-in-out 3;
+}
+@keyframes noti-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+.unread-badge {
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+}
+
+.events-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 11, 15, 0.28);
+  z-index: 45;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 62px 20px 20px;
+}
+.events-popover {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 86px);
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-card);
-  padding: 14px;
-  max-height: calc(100vh - 96px);
+  box-shadow: 0 16px 40px rgba(16, 16, 24, 0.18);
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
 }

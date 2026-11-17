@@ -24,14 +24,34 @@ function playBeep() {
 }
 
 export class EventsPanel {
-  constructor(listEl, countEl, modalEl, modalImgEl, modalTitleEl) {
+  constructor(listEl, countEl, modalEl, modalImgEl, modalTitleEl, btnEl = null, unreadEl = null) {
     this.listEl = listEl;
     this.countEl = countEl;
     this.modalEl = modalEl;
     this.modalImgEl = modalImgEl;
     this.modalTitleEl = modalTitleEl;
+    this.btnEl = btnEl;
+    this.unreadEl = unreadEl;
     this.soundEnabled = false;
+    this.isOpen = false;
+    this.unreadCount = 0;
     this.items = [];
+  }
+
+  setOpen(open) {
+    this.isOpen = open;
+    if (open) {
+      this.unreadCount = 0;
+      this._syncUnread();
+    }
+  }
+
+  _syncUnread() {
+    if (!this.btnEl || !this.unreadEl) return;
+    const hasUnread = this.unreadCount > 0;
+    this.btnEl.classList.toggle('has-unread', hasUnread);
+    this.unreadEl.classList.toggle('hidden', !hasUnread);
+    this.unreadEl.textContent = `+${this.unreadCount}`;
   }
 
   load(items) {
@@ -42,6 +62,10 @@ export class EventsPanel {
   prepend(evt, flashCardFn) {
     this.items.unshift(evt);
     if (this.items.length > 200) this.items.pop();
+    if (!this.isOpen) {
+      this.unreadCount += 1;
+      this._syncUnread();
+    }
     this.render(evt.id);
     if (this.soundEnabled) playBeep();
     flashCardFn?.(evt.camera_id);
