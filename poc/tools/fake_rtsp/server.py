@@ -22,6 +22,15 @@ RTSP_PORT = os.getenv("FAKE_RTSP_PORT", "28555")
 PDG_FILE = RECORD_DIR / "8phandinhgiot_clip.mp4"
 HVT_FILE_1 = RECORD_DIR / "tram-xe-buyt-247-duong-hoang-van-thu_clip.mp4"
 HVT_FILE_2 = RECORD_DIR / "tram-xe-buyt-247-duong-hoang-van-thu_clip_2.mp4"
+NHVP_FILE = RECORD_DIR / "nhahangvuonpho_clip.mp4"
+
+
+def _spawn_ffmpeg_loop(src: Path, url: str, is_concat: bool = False) -> subprocess.Popen:
+    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "warning", "-re", "-stream_loop", "-1"]
+    if is_concat:
+        cmd.extend(["-f", "concat", "-safe", "0"])
+    cmd.extend(["-i", str(src), "-c:v", "copy", "-an", "-f", "rtsp", "-rtsp_transport", "tcp", url])
+    return subprocess.Popen(cmd)
 
 
 def _stop_procs(procs: list[subprocess.Popen]) -> None:
@@ -57,7 +66,7 @@ def main() -> int:
         print(f"[ERROR] Khong tim thay MediaMTX tai: {MEDIAMTX_BIN}", file=sys.stderr)
         return 1
 
-    if not any(f.is_file() for f in (PDG_FILE, HVT_FILE_1, HVT_FILE_2)):
+    if not any(f.is_file() for f in (PDG_FILE, HVT_FILE_1, HVT_FILE_2, NHVP_FILE)):
         print(f"[ERROR] Khong tim thay file MP4 nao trong: {RECORD_DIR}", file=sys.stderr)
         return 1
 
@@ -84,13 +93,7 @@ def main() -> int:
         if PDG_FILE.is_file():
             url = f"rtsp://127.0.0.1:{RTSP_PORT}/pdg"
             print(f"[fake_rtsp] Publishing PDG -> {url}")
-            procs.append(
-                subprocess.Popen([
-                    "ffmpeg", "-hide_banner", "-loglevel", "warning",
-                    "-re", "-stream_loop", "-1", "-i", str(PDG_FILE),
-                    "-c:v", "copy", "-an", "-f", "rtsp", "-rtsp_transport", "tcp", url,
-                ])
-            )
+            procs.append(_spawn_ffmpeg_loop(PDG_FILE, url))
         else:
             print(f"[WARN] Thieu {PDG_FILE.name}, bo qua /pdg")
 
@@ -104,25 +107,20 @@ def main() -> int:
                 encoding="utf-8",
             )
             print(f"[fake_rtsp] Publishing HVT (clip 1 + clip 2) -> {hvt_url}")
-            procs.append(
-                subprocess.Popen([
-                    "ffmpeg", "-hide_banner", "-loglevel", "warning",
-                    "-re", "-stream_loop", "-1", "-f", "concat", "-safe", "0", "-i", str(concat_file),
-                    "-c:v", "copy", "-an", "-f", "rtsp", "-rtsp_transport", "tcp", hvt_url,
-                ])
-            )
+            procs.append(_spawn_ffmpeg_loop(concat_file, hvt_url, is_concat=True))
         elif HVT_FILE_1.is_file() or HVT_FILE_2.is_file():
             src = HVT_FILE_1 if HVT_FILE_1.is_file() else HVT_FILE_2
             print(f"[fake_rtsp] Publishing HVT ({src.name}) -> {hvt_url}")
-            procs.append(
-                subprocess.Popen([
-                    "ffmpeg", "-hide_banner", "-loglevel", "warning",
-                    "-re", "-stream_loop", "-1", "-i", str(src),
-                    "-c:v", "copy", "-an", "-f", "rtsp", "-rtsp_transport", "tcp", hvt_url,
-                ])
-            )
+            procs.append(_spawn_ffmpeg_loop(src, hvt_url))
         else:
             print("[WARN] Thieu video Hoang Van Thu, bo qua /hvt")
+
+        if NHVP_FILE.is_file():
+            nhvp_url = f"rtsp://127.0.0.1:{RTSP_PORT}/nhvp"
+            print(f"[fake_rtsp] Publishing NHVP ({NHVP_FILE.name}) -> {nhvp_url}")
+            procs.append(_spawn_ffmpeg_loop(NHVP_FILE, nhvp_url))
+        else:
+            print(f"[WARN] Thieu {NHVP_FILE.name}, bo qua /nhvp")
 
         backend_proc: subprocess.Popen | None = None
         if args.with_backend:

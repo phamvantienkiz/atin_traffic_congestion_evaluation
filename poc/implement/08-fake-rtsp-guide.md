@@ -12,6 +12,7 @@ poc/records/*.mp4
    ▼
 MediaMTX phụ (:28555)  ──▶  rtsp://127.0.0.1:28555/pdg
                        ──▶  rtsp://127.0.0.1:28555/hvt
+                       ──▶  rtsp://127.0.0.1:28555/nhvp
    │
    ▼  (Backend PoC đọc như camera RTSP thật)
 MediaMTX chính (:28554) ──▶ StreamReader + WebRTC + AI Engine (uv run uvicorn ...)
@@ -27,10 +28,11 @@ MediaMTX chính (:28554) ──▶ StreamReader + WebRTC + AI Engine (uv run uvi
    ```
    Sau khi pull, thư mục đích **`poc/records/`** sẽ tự động có sẵn (và đã được `.gitignore` để không đẩy nhầm file `.mp4` lên Git).
 
-2. Dùng **Termius SFTP** (hoặc `scp`) tải **3 file** từ thư mục `record/` ở máy local lên đúng thư mục **`poc/records/`** trên server:
+2. Dùng **Termius SFTP** (hoặc `scp`) tải các file từ thư mục `record/` ở máy local lên đúng thư mục **`poc/records/`** trên server:
    - `poc/records/8phandinhgiot_clip.mp4`
    - `poc/records/tram-xe-buyt-247-duong-hoang-van-thu_clip.mp4`
    - `poc/records/tram-xe-buyt-247-duong-hoang-van-thu_clip_2.mp4`
+   - `poc/records/nhahangvuonpho_clip.mp4`
 
 ---
 
@@ -62,9 +64,10 @@ Từ thư mục gốc repo, chạy:
 uv run --project poc/backend python poc/tools/fake_rtsp/server.py --with-backend
 ```
 Lệnh này sẽ tự động chạy theo đúng thứ tự:
-1. Mở MediaMTX phụ tại `:28555` và phát lặp vô hạn 2 luồng:
+1. Mở MediaMTX phụ tại `:28555` và phát lặp vô hạn các luồng:
    - **Số 8 Phan Đình Giót:** `rtsp://127.0.0.1:28555/pdg`
    - **Trạm xe buýt 247 Hoàng Văn Thụ** (tự động nối `clip.mp4` + `clip_2.mp4`): `rtsp://127.0.0.1:28555/hvt`
+   - **Nhà hàng Vườn Phố:** `rtsp://127.0.0.1:28555/nhvp`
 2. Tự động bật luôn **PoC Backend (`uvicorn`)** tại cổng `28080`.
 
 Khi muốn dừng, chỉ cần nhấn **`Ctrl+C` 1 lần** — hệ thống sẽ tắt sạch lần lượt Backend, các tiến trình `ffmpeg` và `MediaMTX` phụ.
@@ -82,6 +85,7 @@ Mở giao diện Web PoC trên trình duyệt (`http://<SERVER_IP>:28080`), vào
 | :--- | :--- | :--- |
 | **1. Bus Hoàng Văn Thụ** | `rtsp://127.0.0.1:28555/hvt` | `tram-xe-buyt-247-duong-hoang-van-thu_clip.mp4` + `_clip_2.mp4` |
 | **2. Số 8 Phan Đình Giót** | `rtsp://127.0.0.1:28555/pdg` | `8phandinhgiot_clip.mp4` |
+| **3. Nhà hàng Vườn Phố** | `rtsp://127.0.0.1:28555/nhvp` | `nhahangvuonpho_clip.mp4` |
 
 Sau khi lưu:
 - Live View WebRTC sẽ hiện hình như camera thật.
