@@ -153,8 +153,8 @@ Tạo phiên `tmux` riêng tên `stg` để chạy ngầm 24/7 (không bị tắ
 
 ```bash
 tmux new -s stg
-cd ~/projects/tien/atin_traffic_congestion_evaluation/integrate-stg
-uv run --project ../poc/backend --no-sync python -m src.main
+cd ~/projects/tien/atin_traffic_congestion_evaluation
+uv run --project poc/backend --no-sync python integrate-stg/run_staging.py
 ```
 
 > **Lưu ý về `--no-sync` & `Ctrl + C`:**
