@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import select
 import shutil
 import subprocess
 import threading
@@ -110,14 +111,15 @@ class StreamReader:
     def _build_ffmpeg_cmd(self, mode: str) -> list[str]:
         base = [
             "ffmpeg",
+            "-nostdin",
             "-hide_banner",
             "-loglevel", "error",
             "-rtsp_transport", "tcp",
             "-fflags", "nobuffer",
             "-flags", "low_delay",
             "-strict", "experimental",
-            "-probesize", "32768",
-            "-analyzeduration", "0",
+            "-probesize", "500000",
+            "-analyzeduration", "500000",
         ]
         if mode in ("h264_cuvid", "hevc_cuvid"):
             return base + [
@@ -156,6 +158,28 @@ class StreamReader:
             return
         self._run_opencv()
 
+    def _read_frame_bytes(self, pipe, frame_bytes: int) -> bytes | None:
+        """Read exactly frame_bytes from pipe, returning None on EOF or timeout."""
+        if os.name == "nt":
+            raw = pipe.read(frame_bytes)
+            return raw if len(raw) == frame_bytes else None
+
+        fd = pipe.fileno()
+        buf = bytearray()
+        deadline = time.monotonic() + self.timeout_s
+        while len(buf) < frame_bytes and not self._stop_evt.is_set():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return None
+            ready, _, _ = select.select([fd], [], [], min(remaining, 0.5))
+            if not ready:
+                continue
+            chunk = os.read(fd, frame_bytes - len(buf))
+            if not chunk:
+                return None
+            buf.extend(chunk)
+        return bytes(buf) if len(buf) == frame_bytes else None
+
     def _run_ffmpeg(self) -> None:
         interval = 1.0 / self.fps if self.fps > 0 else 0.0
         frame_bytes = self.w * self.h * 3
@@ -166,11 +190,13 @@ class StreamReader:
         while not self._stop_evt.is_set():
             mode = modes[mode_idx]
             cmd = self._build_ffmpeg_cmd(mode)
+            logger.info("[%s] Opening RTSP via FFmpeg (%s)...", self.camera_id, mode)
             proc = subprocess.Popen(
                 cmd,
+                stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                bufsize=frame_bytes * 2,
+                bufsize=0,
             )
             self._proc = proc
             got_frame = False
@@ -178,8 +204,8 @@ class StreamReader:
             try:
                 assert proc.stdout is not None
                 while not self._stop_evt.is_set():
-                    raw = proc.stdout.read(frame_bytes)
-                    if len(raw) != frame_bytes:
+                    raw = self._read_frame_bytes(proc.stdout, frame_bytes)
+                    if raw is None:
                         break
                     if not got_frame:
                         got_frame = True
