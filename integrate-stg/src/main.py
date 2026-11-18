@@ -40,8 +40,13 @@ class CongestionEdgeOrchestrator:
             client_id=settings.MQTT_CLIENT_ID,
             transport="websockets",
         )
-        self.client.ws_set_options(path=settings.MQTT_WS_PATH)
-        self.client.tls_set(cert_reqs=ssl.CERT_REQUIRED)
+        ws_headers = {"Host": settings.STAGING_HOST_HEADER} if settings.STAGING_HOST_HEADER else None
+        self.client.ws_set_options(path=settings.MQTT_WS_PATH, headers=ws_headers)
+        if settings.MQTT_TLS_INSECURE:
+            self.client.tls_set(cert_reqs=ssl.CERT_NONE)
+            self.client.tls_insecure_set(True)
+        else:
+            self.client.tls_set(cert_reqs=ssl.CERT_REQUIRED)
         self.client.username_pw_set(settings.MQTT_USER, settings.MQTT_PASS)
         self.client.reconnect_delay_set(min_delay=1, max_delay=30)
 

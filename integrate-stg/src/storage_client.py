@@ -26,9 +26,19 @@ def upload_snapshot(frame_bgr: np.ndarray, camera_id: str, category: str | None 
         "category": category or settings.STORAGE_CATEGORY,
     }
 
+    headers = {"Host": settings.STAGING_HOST_HEADER} if settings.STAGING_HOST_HEADER else None
+    verify_tls = not settings.MQTT_TLS_INSECURE
+
     for attempt in range(1, 3):
         try:
-            resp = requests.post(settings.STORAGE_UPLOAD_URL, files=files, data=data, timeout=12)
+            resp = requests.post(
+                settings.STORAGE_UPLOAD_URL,
+                files=files,
+                data=data,
+                headers=headers,
+                verify=verify_tls,
+                timeout=12,
+            )
             resp.raise_for_status()
             body = resp.json()
             object_key = body.get("object_key")

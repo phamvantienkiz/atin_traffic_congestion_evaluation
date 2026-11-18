@@ -62,6 +62,8 @@ class StagingSettings:
     MQTT_PASS: str = os.getenv("MQTT_PASS", "")
     MQTT_CLIENT_ID: str = os.getenv("MQTT_CLIENT_ID", "ai_edge_congestion_junction_01")
     MQTT_KEEPALIVE: int = int(os.getenv("MQTT_KEEPALIVE", "30"))
+    MQTT_TLS_INSECURE: bool = os.getenv("MQTT_TLS_INSECURE", "false").strip().lower() in ("1", "true", "yes")
+    STAGING_HOST_HEADER: str = os.getenv("STAGING_HOST_HEADER", "").strip()
 
     ORGANIZATION_ID: int = int(os.getenv("ORGANIZATION_ID", "0"))
     ZONE_ID: int = int(os.getenv("ZONE_ID", "0"))

@@ -96,6 +96,30 @@ FALLBACK_ROI_POINTS=[{"x":0.0247,"y":0.5172},{"x":0.4374,"y":0.3009},{"x":0.8836
 
 > **Lưu ý về Polyzone (`FORCE_LOCAL_ROI=false`):** Mặc định worker sẽ nhận `ai_zones` hot-reload từ Web STG (khi bạn xóa vùng cũ trên Web STG, trong lúc chưa kịp vẽ lại thì worker tự dùng `FALLBACK_ROI_POINTS`; ngay khi bạn vẽ lại vùng mới trên Web STG thì worker tự cập nhật theo vùng mới). Nếu muốn tạm khóa dùng cứng vùng local thì đổi `FORCE_LOCAL_ROI=true`.
 
+> **Trường hợp `aiot` bị chặn kết nối trực tiếp tới `aioc-stg.atin.vn:443` (`Connection refused`):**
+> Dùng chế độ **SSH Remote Tunnel** tạm thời qua laptop (không tạo cấu hình mạng lâu dài trên laptop và **không sửa code**):
+> 1. Trên laptop (PowerShell/Terminal riêng, tắt cửa sổ là ngắt tunnel), chạy:
+>    ```powershell
+>    ssh -N -R 18443:aioc-stg.atin.vn:443 tts@192.168.1.170
+>    ```
+> 2. Trong `integrate-stg/.env` trên `aiot`, **comment khối `[A]`** và **bỏ comment khối `[B]`**:
+>    ```ini
+>    # --- [A] KẾT NỐI TRỰC TIẾP TỪ SERVER (MẶC ĐỊNH) ---
+>    # MQTT_HOST=aioc-stg.atin.vn
+>    # MQTT_PORT=443
+>    # STORAGE_UPLOAD_URL=https://aioc-stg.atin.vn/storage/upload/file
+>    # MQTT_TLS_INSECURE=false
+>    # STAGING_HOST_HEADER=
+>
+>    # --- [B] CHẠY TẠM QUA SSH REMOTE TUNNEL TỪ LAPTOP ---
+>    MQTT_HOST=127.0.0.1
+>    MQTT_PORT=18443
+>    STORAGE_UPLOAD_URL=https://127.0.0.1:18443/storage/upload/file
+>    MQTT_TLS_INSECURE=true
+>    STAGING_HOST_HEADER=aioc-stg.atin.vn
+>    ```
+> 3. Khi server `aiot` và Staging thông mạng trực tiếp trở lại: chỉ cần **comment lại khối `[B]`**, **bỏ comment khối `[A]`** và restart worker.
+
 Lưu và thoát `nano`: bấm `Ctrl + O` $\rightarrow$ `Enter` $\rightarrow$ `Ctrl + X`.
 
 ---
