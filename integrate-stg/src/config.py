@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 # Ép FFmpeg đọc RTSP không đệm để giảm độ trễ BBox so với luồng WebRTC trên Web VMS
 os.environ.setdefault(
     "OPENCV_FFMPEG_CAPTURE_OPTIONS",
-    "rtsp_transport;tcp|fflags;nobuffer|flags;low_delay|stimeout;5000000",
+    "rtsp_transport;tcp|fflags;nobuffer|flags;low_delay|probesize;32768|analyzeduration;0|stimeout;5000000",
 )
 
 INTEGRATE_ROOT = Path(__file__).resolve().parents[1]

@@ -7,10 +7,12 @@ import os
 import select
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from collections import deque
 from dataclasses import dataclass
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -21,6 +23,12 @@ os.environ.setdefault(
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_ffmpeg_bin() -> str | None:
+    """Prefer ffmpeg inside the active virtualenv bin/Scripts dir before system PATH."""
+    venv_bin = Path(sys.executable).parent
+    return shutil.which("ffmpeg", path=str(venv_bin)) or shutil.which("ffmpeg")
 
 
 @dataclass
@@ -108,9 +116,10 @@ class StreamReader:
         low = self.url.lower()
         return low.startswith("rtsp://") or low.startswith("rtsps://")
 
-    def _build_ffmpeg_cmd(self, mode: str) -> list[str]:
+    def _build_ffmpeg_cmd(self, mode: str, ffmpeg_bin: str = "ffmpeg") -> list[str]:
+        probe = "1000000" if mode == "cuda_hwaccel" else "500000"
         base = [
-            "ffmpeg",
+            ffmpeg_bin,
             "-nostdin",
             "-hide_banner",
             "-loglevel", "error",
@@ -118,8 +127,8 @@ class StreamReader:
             "-fflags", "nobuffer",
             "-flags", "low_delay",
             "-strict", "experimental",
-            "-probesize", "500000",
-            "-analyzeduration", "500000",
+            "-probesize", probe,
+            "-analyzeduration", probe,
         ]
         if mode in ("h264_cuvid", "hevc_cuvid"):
             return base + [
@@ -132,7 +141,8 @@ class StreamReader:
                 "-pix_fmt", "bgr24",
                 "pipe:1",
             ]
-        return base + [
+        hw_args = ["-hwaccel", "cuda"] if mode == "cuda_hwaccel" else []
+        return base + hw_args + [
             "-i", self.url,
             "-an", "-sn",
             "-vf", f"scale={self.w}:{self.h}:flags=fast_bilinear",
@@ -148,13 +158,14 @@ class StreamReader:
             self._emit_times.append(now)
 
     def _run(self) -> None:
+        ffmpeg_bin = _resolve_ffmpeg_bin()
         use_ffmpeg = (
             self.backend in ("auto", "ffmpeg", "ffmpeg_cuda")
             and self._is_rtsp_url()
-            and shutil.which("ffmpeg") is not None
+            and ffmpeg_bin is not None
         )
-        if use_ffmpeg:
-            self._run_ffmpeg()
+        if use_ffmpeg and ffmpeg_bin is not None:
+            self._run_ffmpeg(ffmpeg_bin)
             return
         self._run_opencv()
 
@@ -180,16 +191,16 @@ class StreamReader:
             buf.extend(chunk)
         return bytes(buf) if len(buf) == frame_bytes else None
 
-    def _run_ffmpeg(self) -> None:
+    def _run_ffmpeg(self, ffmpeg_bin: str = "ffmpeg") -> None:
         interval = 1.0 / self.fps if self.fps > 0 else 0.0
         frame_bytes = self.w * self.h * 3
-        modes = ["h264_cuvid", "hevc_cuvid", "ffmpeg_cpu"]
+        modes = ["h264_cuvid", "cuda_hwaccel", "hevc_cuvid", "ffmpeg_cpu"]
         mode_idx = 0
         last_emit = 0.0
 
         while not self._stop_evt.is_set():
             mode = modes[mode_idx]
-            cmd = self._build_ffmpeg_cmd(mode)
+            cmd = self._build_ffmpeg_cmd(mode, ffmpeg_bin)
             logger.info("[%s] Opening RTSP via FFmpeg (%s)...", self.camera_id, mode)
             proc = subprocess.Popen(
                 cmd,
@@ -209,7 +220,7 @@ class StreamReader:
                         break
                     if not got_frame:
                         got_frame = True
-                        label = "CUDA" if mode.endswith("_cuvid") else "CPU"
+                        label = "CUDA" if (mode.endswith("_cuvid") or mode == "cuda_hwaccel") else "CPU"
                         logger.info(
                             "[%s] Connected via FFmpeg %s (%s %dx%d)",
                             self.camera_id,
