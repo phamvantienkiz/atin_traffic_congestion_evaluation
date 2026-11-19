@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 960 372" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="staging-pipeline-title staging-pipeline-desc" id="staging_pipeline_diagram-root">
+        <title id="staging-pipeline-title">Luồng giải mã GPU và xử lý song song trên Staging</title>
+        <desc id="staging-pipeline-desc">Kiến trúc triển khai trên Staging: luồng RTSP HEVC được giải mã phần cứng qua FFmpeg NVDEC trên GPU RTX A400, sau đó tách thành hai luồng BBox và Macro chạy song song để đẩy dữ liệu lên MQTT Staging ở 25 FPS.</desc>
+        <defs>
+      <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Noto+Serif:ital@0;1&amp;family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Serif+KR:wght@400&amp;family=Noto+Sans+TC:wght@400;500;600&amp;family=Noto+Serif+TC:wght@400&amp;display=swap');
+      #staging_pipeline_diagram-root { --color-paper:   #f5f5f5;
+      --color-ink:     #2d3142;
+      --color-muted:   #4f5d75;
+      --color-accent:  #eb6c36;
+      --font-sans:     'Geist', 'Noto Sans', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', 'Noto Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace; }
+      #staging_pipeline_diagram-root { font-family: var(--font-sans); color: var(--color-ink); }
+      #staging_pipeline_diagram-root .diagram-container { width: 100%; overflow-x: auto; }
+      #staging_pipeline_diagram-root .diagram-container { overflow-x: visible; }</style>
+          <marker id="staging_pipeline_diagram-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/>
+          </marker>
+          <marker id="staging_pipeline_diagram-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/>
+          </marker>
+          <marker id="staging_pipeline_diagram-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/>
+          </marker>
+        </defs>
+
+        <!-- Background -->
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+        <!-- ZONES (drawn before arrows and nodes) -->
+        <rect x="24" y="24" width="400" height="284" rx="8" fill="#2d3142" fill-opacity="0.02" stroke="#2d3142" stroke-opacity="0.12" stroke-width="0.8"/>
+        <rect x="36" y="28" width="132" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="102" y="37" fill="#2d3142" fill-opacity="0.50" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">1. GIẢI MÃ RTSP (GPU)</text>
+
+        <rect x="472" y="24" width="244" height="284" rx="8" fill="#2d3142" fill-opacity="0.02" stroke="#2d3142" stroke-opacity="0.12" stroke-width="0.8"/>
+        <rect x="484" y="28" width="160" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="564" y="37" fill="#2d3142" fill-opacity="0.50" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">2. XỬ LÝ SONG SONG (25 FPS)</text>
+
+        <!-- ARROWS (drawn before nodes) -->
+        <!-- Node 1 -> Node 2 (horizontal) -->
+        <line x1="200" y1="170" x2="248" y2="170" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#staging_pipeline_diagram-arrow)"/>
+        <rect x="206" y="150" width="36" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="224" y="159" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">RTSP</text>
+
+        <!-- Node 2 -> Node 3 (Fast GPU path, right+up elbow r=8) -->
+        <path d="M 408,158 H 444 Q 452,158 452,150 V 118 Q 452,110 460,110 H 496" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#staging_pipeline_diagram-arrow)"/>
+        <rect x="458" y="128" width="32" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="474" y="137" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">720P</text>
+
+        <!-- Node 2 -> Node 4 (Macro CPU async path, right+down elbow r=8, dashed) -->
+        <path d="M 408,182 H 444 Q 452,182 452,190 V 230 Q 452,238 460,238 H 496" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#staging_pipeline_diagram-arrow)"/>
+        <rect x="458" y="204" width="32" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="474" y="213" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ASYNC</text>
+
+        <!-- Node 3 -> Node 5 (BBox output, right+down elbow r=8) -->
+        <path d="M 692,110 H 720 Q 728,110 728,118 V 150 Q 728,158 736,158 H 764" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#staging_pipeline_diagram-arrow)"/>
+        <rect x="734" y="128" width="28" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="748" y="137" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">BBOX</text>
+
+        <!-- Node 4 -> Node 5 (HUD output, right+up elbow r=8, dashed) -->
+        <path d="M 692,238 H 720 Q 728,238 728,230 V 190 Q 728,182 736,182 H 764" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#staging_pipeline_diagram-arrow)"/>
+        <rect x="734" y="204" width="24" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="746" y="213" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">HUD</text>
+
+        <!-- NODES -->
+        <!-- Node 1: go2rtc / RTSP -->
+        <rect x="40" y="132" width="160" height="76" rx="6" fill="#f5f5f5"/>
+        <rect x="40" y="132" width="160" height="76" rx="6" fill="#ffffff" stroke="#bfc0c0" stroke-width="1"/>
+        <rect x="48" y="140" width="36" height="12" rx="2" fill="none" stroke="#4f5d75" stroke-opacity="0.40" stroke-width="0.8"/>
+        <text x="66" y="149" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">INPUT</text>
+        <text x="120" y="174" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans', sans-serif" text-anchor="middle">go2rtc / 1.9.15</text>
+        <text x="120" y="190" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">HEVC 2560×1440</text>
+
+        <!-- Node 2: FFmpeg NVDEC -->
+        <rect x="248" y="132" width="160" height="76" rx="6" fill="#f5f5f5"/>
+        <rect x="248" y="132" width="160" height="76" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1"/>
+        <rect x="256" y="140" width="36" height="12" rx="2" fill="none" stroke="#4f5d75" stroke-opacity="0.40" stroke-width="0.8"/>
+        <text x="274" y="149" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">NVDEC</text>
+        <text x="328" y="174" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans', sans-serif" text-anchor="middle">FFmpeg (cuda_hwaccel)</text>
+        <text x="328" y="190" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">.venv/bin · RTX A400</text>
+
+        <!-- Node 3: Luồng BBox (GPU) -->
+        <rect x="496" y="68" width="196" height="84" rx="6" fill="#f5f5f5"/>
+        <rect x="496" y="68" width="196" height="84" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1"/>
+        <rect x="504" y="76" width="32" height="12" rx="2" fill="none" stroke="#4f5d75" stroke-opacity="0.40" stroke-width="0.8"/>
+        <text x="520" y="85" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">FAST</text>
+        <text x="594" y="108" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans', sans-serif" text-anchor="middle">Luồng BBox (GPU)</text>
+        <text x="594" y="124" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">YOLO + ByteTrack (0.25)</text>
+        <text x="594" y="138" fill="#7a8399" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Khử trễ Kalman Filter</text>
+
+        <!-- Node 4: Luồng Macro (CPU) -->
+        <rect x="496" y="196" width="196" height="84" rx="6" fill="#f5f5f5"/>
+        <rect x="496" y="196" width="196" height="84" rx="6" fill="#ececec" stroke="#bfc0c0" stroke-width="1"/>
+        <rect x="504" y="204" width="36" height="12" rx="2" fill="none" stroke="#4f5d75" stroke-opacity="0.40" stroke-width="0.8"/>
+        <text x="522" y="213" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ASYNC</text>
+        <text x="594" y="236" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans', sans-serif" text-anchor="middle">Luồng Macro (CPU)</text>
+        <text x="594" y="252" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">ZoneTime + FlowOccupancy</text>
+        <text x="594" y="266" fill="#7a8399" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Occlusion + StateMachine</text>
+
+        <!-- Node 5: MQTT Staging (1 focal element) -->
+        <rect x="764" y="132" width="172" height="76" rx="6" fill="#f5f5f5"/>
+        <rect x="764" y="132" width="172" height="76" rx="6" fill="#eb6c36" fill-opacity="0.08" stroke="#eb6c36" stroke-width="1.2"/>
+        <rect x="772" y="140" width="40" height="12" rx="2" fill="none" stroke="#eb6c36" stroke-opacity="0.50" stroke-width="0.8"/>
+        <text x="792" y="149" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">OUTPUT</text>
+        <text x="850" y="174" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans', sans-serif" text-anchor="middle">MQTT Staging</text>
+        <text x="850" y="190" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">BBox + 5 dòng HUD · 25 FPS</text>
+
+        <!-- LEGEND (horizontal bottom strip) -->
+        <line x1="24" y1="328" x2="936" y2="328" stroke="#2d3142" stroke-opacity="0.12" stroke-width="0.8"/>
+
+        <line x1="24" y1="348" x2="52" y2="348" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#staging_pipeline_diagram-arrow)"/>
+        <text x="60" y="351" fill="#4f5d75" font-size="9" font-family="'Geist', 'Noto Sans', sans-serif">Luồng chính (25 FPS)</text>
+
+        <line x1="204" y1="348" x2="232" y2="348" stroke="#4f5d75" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#staging_pipeline_diagram-arrow)"/>
+        <text x="240" y="351" fill="#4f5d75" font-size="9" font-family="'Geist', 'Noto Sans', sans-serif">Luồng nền bất đồng bộ</text>
+
+        <rect x="392" y="342" width="16" height="12" rx="2" fill="#eb6c36" fill-opacity="0.08" stroke="#eb6c36" stroke-width="1"/>
+        <text x="416" y="351" fill="#4f5d75" font-size="9" font-family="'Geist', 'Noto Sans', sans-serif">Đầu ra hiển thị Staging</text>
+      </svg>

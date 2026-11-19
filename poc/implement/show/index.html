@@ -410,29 +410,41 @@
               </table>
             </div>
 
-            <div class="card-soft" style="padding: 12px 18px;">
-              <div class="card-label" style="margin-bottom: 6px;"><span>2. Bảng tra nhanh ngưỡng Thời gian (Poly Zone 18–22m · Cửa sổ 30s)</span></div>
-              <table class="clean-table" style="font-size: 13px;">
-                <thead>
-                  <tr>
-                    <th>Mức ranh giới</th>
-                    <th>Ô tô / Buýt / Tải (4B)</th>
-                    <th>Xe máy (2B)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td><strong>Ngưỡng Chậm</strong> (<code class="mono">CLEAR → CONGESTED</code>)</td>
-                    <td><code class="mono">T50 &gt; 5.5s</code> hoặc <code class="mono">D85 &gt; 6.5s</code></td>
-                    <td><code class="mono">T50 &gt; 4.5s</code> hoặc <code class="mono">D85 &gt; 5.0s</code></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Ngưỡng Kẹt</strong> (<code class="mono">CONGESTED → GRIDLOCKED</code>)</td>
-                    <td><code class="mono">T50 &gt; 16.0s</code> hoặc <code class="mono">D85 &gt; 20.0s</code></td>
-                    <td><code class="mono">T50 &gt; 13.5s</code> hoặc <code class="mono">D85 &gt; 17.0s</code></td>
-                  </tr>
-                </tbody>
-              </table>
+            <div style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 12px;">
+              <div class="card-soft" style="padding: 12px 16px;">
+                <div class="card-label" style="margin-bottom: 6px;"><span>2. Ngưỡng Thời gian (Poly Zone 18–22m · Cửa sổ 30s)</span></div>
+                <table class="clean-table" style="font-size: 12.5px;">
+                  <thead>
+                    <tr>
+                      <th>Mức ranh giới</th>
+                      <th>Ô tô / Buýt / Tải (4B)</th>
+                      <th>Xe máy (2B)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>Ngưỡng Chậm</strong> (<code class="mono">CONGESTED</code>)</td>
+                      <td><code class="mono">T50 &gt; 5.5s</code> hoặc <code class="mono">D85 &gt; 6.5s</code></td>
+                      <td><code class="mono">T50 &gt; 4.5s</code> hoặc <code class="mono">D85 &gt; 5.0s</code></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Ngưỡng Kẹt</strong> (<code class="mono">GRIDLOCKED</code>)</td>
+                      <td><code class="mono">T50 &gt; 16.0s</code> hoặc <code class="mono">D85 &gt; 20.0s</code></td>
+                      <td><code class="mono">T50 &gt; 13.5s</code> hoặc <code class="mono">D85 &gt; 17.0s</code></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="card-soft" style="padding: 12px 16px;">
+                <div class="card-label" style="margin-bottom: 6px;"><span>3. Khi nào kích hoạt <code class="mono">T50</code> vs <code class="mono">D85</code>?</span></div>
+                <ul style="margin: 0; padding-left: 16px; font-size: 12.5px; line-height: 1.48; color: var(--text-secondary);">
+                  <li><strong>Tính liên tục mọi frame</strong> (không đợi <code class="mono">O_vis</code> lên 80–90%):</li>
+                  <li><strong>Kích hoạt <code class="mono">T50</code>:</strong> Khi có <strong>≥ 2 xe</strong> cùng nhóm (<code class="mono">2B/4B</code>) đã đi qua <strong>≥ 45%</strong> trục vùng trong 30s gần nhất.</li>
+                  <li><strong>Kích hoạt <code class="mono">D85</code>:</strong> Khi có <strong>≥ 2 xe</strong> cùng nhóm đang nằm trong vùng tối thiểu <strong>≥ 2.0s</strong> (chưa đủ 2 mẫu &rarr; <code class="mono">None</code>).</li>
+                  <li><strong>Ưu tiên xét trạng thái:</strong> <code class="mono">CONGESTED</code> ưu tiên <code class="mono">T50</code>, chỉ dùng <code class="mono">D85</code> khi nhóm đó chưa có <code class="mono">T50</code> &amp; <code class="mono">Flow ≤ 15.0</code>; <code class="mono">GRIDLOCKED</code> dùng cả <code class="mono">T50</code> hoặc <code class="mono">D85</code> + <code class="mono">Flow ≤ 15.0</code>.</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>

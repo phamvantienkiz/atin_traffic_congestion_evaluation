@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 960 456" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="mqtt-payloads-title mqtt-payloads-desc" id="mqtt_payloads_diagram-root">
+        <title id="mqtt-payloads-title">Cấu trúc JSON Payload MQTT gửi lên Server</title>
+        <desc id="mqtt-payloads-desc">So sánh cấu trúc JSON của hai bản tin MQTT chính gửi lên Server: bản tin BBox và HUD realtime ở 25 FPS và bản tin sự kiện ùn tắc đã xác nhận.</desc>
+        <defs>
+      <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Noto+Serif:ital@0;1&amp;family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Serif+KR:wght@400&amp;family=Noto+Sans+TC:wght@400;500;600&amp;family=Noto+Serif+TC:wght@400&amp;display=swap');
+      #mqtt_payloads_diagram-root { --color-paper:   #f5f5f5;
+      --color-ink:     #2d3142;
+      --color-muted:   #4f5d75;
+      --color-accent:  #eb6c36;
+      --font-sans:     'Geist', 'Noto Sans', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', 'Noto Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace; }
+      #mqtt_payloads_diagram-root { font-family: var(--font-sans); color: var(--color-ink); }
+      #mqtt_payloads_diagram-root .diagram-container { width: 100%; overflow-x: auto; }
+      #mqtt_payloads_diagram-root .diagram-container { overflow-x: visible; }</style>
+          <marker id="mqtt_payloads_diagram-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/>
+          </marker>
+          <marker id="mqtt_payloads_diagram-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/>
+          </marker>
+          <marker id="mqtt_payloads_diagram-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/>
+          </marker>
+        </defs>
+
+        <!-- Background -->
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+        <!-- LEFT CARD: BBox & HUD Realtime -->
+        <rect x="24" y="24" width="444" height="408" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1"/>
+        <rect x="40" y="36" width="104" height="14" rx="2" fill="none" stroke="#4f5d75" stroke-opacity="0.40" stroke-width="0.8"/>
+        <text x="92" y="46" fill="#4f5d75" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">QOS 0 · ~25 FPS</text>
+
+        <text x="40" y="70" fill="#2d3142" font-size="13" font-weight="600" font-family="'Geist', 'Noto Sans', sans-serif">1. Payload BBox &amp; HUD Realtime</text>
+        <text x="40" y="86" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace">smart_vms/ai/bbox/{camera_code}</text>
+        <line x1="40" y1="98" x2="452" y2="98" stroke="#2d3142" stroke-opacity="0.12" stroke-width="0.8"/>
+
+        <rect x="40" y="108" width="412" height="308" rx="4" fill="#f8f9fb" stroke="#2d3142" stroke-opacity="0.08" stroke-width="0.8"/>
+        <text x="52" y="126" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">{</text>
+        <text x="52" y="141" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "camera_code": "cam_01",</text>
+        <text x="52" y="156" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "camera_id": "uuid",</text>
+        <text x="52" y="171" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "organization_id": 1,</text>
+        <text x="52" y="186" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "ai_modules": "PLATE",</text>
+        <text x="52" y="201" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "timestamp": 1763512345.12,</text>
+        <text x="52" y="216" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "detections": [{</text>
+        <text x="52" y="231" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "id": "veh_12",</text>
+        <text x="52" y="246" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "class": "car",</text>
+        <text x="52" y="261" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "confidence": 0.87,</text>
+        <text x="52" y="276" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "bbox": [0.41, 0.52, 0.56, 0.71],</text>
+        <text x="52" y="291" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "track_id": 12</text>
+        <text x="52" y="306" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  }],</text>
+        <text x="52" y="321" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "hud": {</text>
+        <text x="52" y="336" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "lines": ["ÙN TẮC", "Độ phủ: 78%...", ...],</text>
+        <text x="52" y="351" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "line_colors": ["#f59e0b", "#e2e8f0", ...],</text>
+        <text x="52" y="366" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "color": "#f59e0b",</text>
+        <text x="52" y="381" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "display_ms": 1000</text>
+        <text x="52" y="396" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  }</text>
+        <text x="52" y="411" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">}</text>
+
+        <!-- RIGHT CARD: Confirmed Event -->
+        <rect x="492" y="24" width="444" height="408" rx="6" fill="#ffffff" stroke="#eb6c36" stroke-width="1.2"/>
+        <rect x="508" y="36" width="96" height="14" rx="2" fill="none" stroke="#eb6c36" stroke-opacity="0.50" stroke-width="0.8"/>
+        <text x="556" y="46" fill="#eb6c36" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">QOS 1 · EVENT</text>
+
+        <text x="508" y="70" fill="#2d3142" font-size="13" font-weight="600" font-family="'Geist', 'Noto Sans', sans-serif">2. Payload Sự kiện xác nhận</text>
+        <text x="508" y="86" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace">smart_vms/ai_events/TRAFFIC_CONGESTION</text>
+        <line x1="508" y1="98" x2="920" y2="98" stroke="#2d3142" stroke-opacity="0.12" stroke-width="0.8"/>
+
+        <rect x="508" y="108" width="412" height="308" rx="4" fill="#f8f9fb" stroke="#2d3142" stroke-opacity="0.08" stroke-width="0.8"/>
+        <text x="520" y="126" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">{</text>
+        <text x="520" y="141" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "ai_modules": "TRAFFIC_CONGESTION",</text>
+        <text x="520" y="156" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "camera_id": "uuid",</text>
+        <text x="520" y="171" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "camera_code": "cam_01",</text>
+        <text x="520" y="186" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "event_time": "2026-11-19T09:15:00+07:00",</text>
+        <text x="520" y="201" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "entity_type": "TRAFFIC_STATE",</text>
+        <text x="520" y="216" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "entity_id": "congestion_cam_01_1763512",</text>
+        <text x="520" y="231" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "confidence": 0.96,</text>
+        <text x="520" y="246" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "severity": "HIGH",</text>
+        <text x="520" y="261" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "snapshot_url": "anomaly/2026/.../img.jpg",</text>
+        <text x="520" y="276" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  "payload": {</text>
+        <text x="520" y="291" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "state": "GRIDLOCKED",</text>
+        <text x="520" y="306" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "event_stage": "CONFIRMED_3M",</text>
+        <text x="520" y="321" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "duration_s": 180,</text>
+        <text x="520" y="336" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "o_vis": 0.8842,</text>
+        <text x="520" y="351" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "flow_speed_px_s": 4.25,</text>
+        <text x="520" y="366" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "vehicle_count": 32,</text>
+        <text x="520" y="381" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">    "zone_name": "ROI"</text>
+        <text x="520" y="396" fill="#4f5d75" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">  }</text>
+        <text x="520" y="411" fill="#2d3142" font-size="9.5" font-family="'Geist Mono', monospace" xml:space="preserve">}</text>
+      </svg>

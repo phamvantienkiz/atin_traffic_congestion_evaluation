@@ -167,3 +167,21 @@ Khi đồng bộ ngược tài liệu trong `poc/implement/`, cần kiểm tra v
 | **Điều kiện `time_congested` (`classifier.py`)** | `OR` 4 chỉ số `T50`/`D85` | **Ưu tiên `T50`; `D85` chỉ dùng khi nhóm thiếu `T50` & `v_flow <= 15.0`** | Tránh 1–2 xe rẽ/dừng lẻ tẻ làm `D85` vượt ngưỡng và kéo cả zone thành `CONGESTED` |
 | **`MORPH_CLOSE` kernel (`flow_occupancy.py`)** | Elip `(9, 7)` | **Elip `(5, 5)`** | Giảm hiện tượng thổi phồng `O_vis` trên luồng nhiều xe máy |
 | **`EXIT_CLEAR_S` (`config.py`)** | `15.0s` | **`10.0s`** | Thoát khỏi trạng thái `CONGESTED` về `CLEAR` nhanh hơn khi luồng xe thông trở lại |
+
+---
+
+## 7. Tối Ưu Độ Trễ BBox Realtime & Xử Lý Sự Cố RTSP `go2rtc` (`d03a2ea`, `e04414a`)
+
+### 1. Pipeline Low-Latency BBox (`d03a2ea`)
+- **Khử trễ pha Kalman Filter (`tracker.py`):** Thêm `_snap_box_to_raw()` trong `CameraTracker.update()` để khớp IoU (`min_iou=0.45`) từ `tracked.xyxy` về đúng tọa độ `det.xyxy` gốc của YOLO trên frame hiện tại.
+- **Tách nhánh song song Fast BBox / Async Macro (`camera_processor.py`, `integrate-stg/src/worker.py`):**
+  - Tách `CameraProcessor.process_fast()` (ByteTrack + chuẩn hóa BBox) và `CameraProcessor.process_macro()` (`ZoneTime + FlowOccupancy + OcclusionShield + classify + StateMachine`).
+  - `worker.py` publish BBox ngay sau YOLO + `process_fast()` và đẩy `macro_task` qua `Latest-Macro-Slot` cho thread `_macro_loop` chạy song song trên CPU.
+- **Tối ưu cấu hình Staging (`integrate-stg/.env.example`):** Hạ `TRACK_ACTIVATION_CONF=0.25` để xe vừa vào vùng được gán track ngay ở frame đầu tiên; đổi `cv2.INTER_AREA` $\rightarrow$ `cv2.INTER_LINEAR` và thêm cờ `fflags;nobuffer|flags;low_delay` cho RTSP.
+- **Bổ sung giải mã phần cứng FFmpeg CUDA/CUVID (`stream_reader.py`):** Hỗ trợ `RTSP_BACKEND=auto` thử `h264_cuvid` $\rightarrow$ `hevc_cuvid` (`-hwaccel cuda -resize 1280x720`) trước khi fallback về CPU/OpenCV.
+
+### 2. Khắc Phục Lỗi Treo `FFmpeg CUVID` Trên Luồng `go2rtc/1.9.15` Staging (`e04414a`)
+- **Sự cố thực tế:** Khi test trên server `aiot`, `/usr/bin/ffmpeg` (Ubuntu 22.04) không parse được luồng H.264 từ `go2rtc/1.9.15` (`[h264] a feature which has not been implemented`, `Video: h264, none: unspecified size`), khiến `StreamReader` bị block khi đọc pipe (`FPS=0.0`). Chi tiết xem [`06_FFMPEG_CUVID_GO2RTC_ISSUE.md`](../../integrate-stg/specs/06_FFMPEG_CUVID_GO2RTC_ISSUE.md).
+- **Khắc phục:**
+  - Thêm `-nostdin`, `stdin=subprocess.DEVNULL`, `-probesize 500000 -analyzeduration 500000` và `_read_frame_bytes()` dùng `select.select` timeout `5.0s` để tự ngắt `ffmpeg` bị treo và fallback mượt sang `OpenCV`.
+  - Đổi mặc định `integrate-stg/.env.example` và `04_IMPLEMENTATION_AND_RUN_GUIDE.md` sang `RTSP_BACKEND=opencv` cho Staging `go2rtc` (giữ nguyên các tối ưu `nobuffer`/`low_delay`, `INTER_LINEAR`, `_snap_box_to_raw`, `process_fast` + `_macro_loop`).
